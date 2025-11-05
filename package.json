@@ -1,0 +1,40 @@
+{
+  "name": "yoklama-sistemi",
+  "version": "1.0.0",
+  "description": "Yeniden kullanılabilir QR kod tabanlı yoklama sistemi",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "concurrently \"npm run backend:dev\" \"npm run frontend:dev\"",
+    "backend:dev": "cd backend && npm run dev",
+    "frontend:dev": "cd frontend && npm run dev",
+    "build": "npm run backend:build && npm run frontend:build",
+    "electron:dev": "electron .",
+    "electron:build": "electron-builder",
+    "start": "npm run backend:start"
+  },
+  "keywords": ["attendance", "qr-code", "electron", "attendance-system"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.yoklama.sistem",
+    "productName": "Yoklama Sistemi",
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "files": [
+      "backend/dist/**/*",
+      "frontend/dist/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "release"
+    }
+  }
+}
