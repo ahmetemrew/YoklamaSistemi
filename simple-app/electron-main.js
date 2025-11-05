@@ -51,7 +51,7 @@ function createWindow() {
             contextIsolation: true,
             enableRemoteModule: false
         },
-        icon: path.join(__dirname, 'icon.png'),
+        // icon: path.join(__dirname, 'icon.png'), // Optional
         autoHideMenuBar: true,
         title: 'Yoklama Sistemi'
     });
