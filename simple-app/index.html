@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yoklama Sistemi</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .main-content {
+            padding: 40px;
+        }
+
+        /* Home Screen */
+        .home-screen {
+            text-align: center;
+        }
+
+        .big-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .big-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            padding: 60px 40px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
+        }
+
+        .big-button:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
+        }
+
+        .big-button .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        /* Events List Screen */
+        .events-screen {
+            display: none;
+        }
+
+        .screen-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .screen-header h2 {
+            color: #2c3e50;
+            font-size: 28px;
+        }
+
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+        }
+
+        .btn-secondary {
+            background: #95a5a6;
+        }
+
+        .btn-secondary:hover {
+            background: #7f8c8d;
+        }
+
+        .btn-success {
+            background: #27ae60;
+        }
+
+        .btn-success:hover {
+            background: #229954;
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+        }
+
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+
+        .event-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            border-left: 5px solid #667eea;
+        }
+
+        .event-card h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 22px;
+        }
+
+        .event-meta {
+            color: #7f8c8d;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .event-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+        }
+
+        .empty-state .icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        /* Create Event Screen */
+        .create-event-screen {
+            display: none;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #2c3e50;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ecf0f1;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .radio-group {
+            display: flex;
+            gap: 20px;
+            margin-top: 10px;
+        }
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .file-upload {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-upload:hover {
+            background: #f8f9fa;
+            border-color: #5568d3;
+        }
+
+        .file-upload input[type="file"] {
+            display: none;
+        }
+
+        .participants-preview {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .participant-item {
+            padding: 10px;
+            background: white;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Live Scanning Screen */
+        .scanning-screen {
+            display: none;
+        }
+
+        .scan-info-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .scan-info-box h2 {
+            font-size: 28px;
+            margin-bottom: 20px;
+        }
+
+        .qr-display {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            display: inline-block;
+            margin: 20px 0;
+        }
+
+        .qr-display canvas {
+            display: block;
+        }
+
+        .connection-url {
+            font-size: 24px;
+            font-weight: bold;
+            background: rgba(255,255,255,0.2);
+            padding: 15px 30px;
+            border-radius: 8px;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+
+        .stat-box .value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .label {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .live-feed {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .live-feed h3 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .scan-entry {
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 12px;
+            border-left: 4px solid #27ae60;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .scan-entry.duplicate {
+            border-left-color: #f39c12;
+        }
+
+        .scan-entry.invalid {
+            border-left-color: #e74c3c;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .scan-entry .name {
+            font-weight: 600;
+            color: #2c3e50;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .scan-entry .time {
+            color: #7f8c8d;
+            font-size: 14px;
+        }
+
+        .scan-entry .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            margin-left: 10px;
+            font-weight: 600;
+        }
+
+        .scan-entry .status.success {
+            background: #d4edda;
+            color: #27ae60;
+        }
+
+        .scan-entry .status.warning {
+            background: #fff3cd;
+            color: #f39c12;
+        }
+
+        .scan-entry .status.error {
+            background: #f8d7da;
+            color: #e74c3c;
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Hidden */
+        .hidden {
+            display: none !important;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .big-buttons {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-bar {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .event-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Yoklama Sistemi</h1>
+            <p>Kolay ve Hızlı QR Kod Tabanlı Yoklama</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Home Screen -->
+            <div class="home-screen" id="homeScreen">
+                <h2 style="color: #2c3e50; margin-bottom: 20px;">Hoş Geldiniz</h2>
+                <p style="color: #7f8c8d; margin-bottom: 40px;">
+                    Etkinliklerinizi yönetin veya yoklama almaya başlayın
+                </p>
+
+                <div class="big-buttons">
+                    <button class="big-button" onclick="showEventsScreen()">
+                        <span class="icon">📋</span>
+                        Yönet
+                    </button>
+                    <button class="big-button" onclick="showScanningOptions()">
+                        <span class="icon">📱</span>
+                        Yoklama Al
+                    </button>
+                </div>
+            </div>
+
+            <!-- Events Screen -->
+            <div class="events-screen" id="eventsScreen">
+                <div class="screen-header">
+                    <h2>Etkinlikler</h2>
+                    <div>
+                        <button class="btn btn-secondary" onclick="showHomeScreen()" style="margin-right: 10px;">
+                            ← Geri
+                        </button>
+                        <button class="btn btn-success" onclick="showCreateEventScreen()">
+                            ➕ Yeni Etkinlik
+                        </button>
+                    </div>
+                </div>
+
+                <div id="eventsList">
+                    <div class="empty-state">
+                        <div class="icon">📭</div>
+                        <h3>Henüz etkinlik yok</h3>
+                        <p>Yeni bir etkinlik oluşturarak başlayın</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Create Event Screen -->
+            <div class="create-event-screen" id="createEventScreen">
+                <div class="screen-header">
+                    <h2>Yeni Etkinlik Oluştur</h2>
+                    <button class="btn btn-secondary" onclick="showEventsScreen()">
+                        ← Geri
+                    </button>
+                </div>
+
+                <form id="createEventForm" onsubmit="createEvent(event)">
+                    <div class="form-group">
+                        <label>Etkinlik Adı *</label>
+                        <input type="text" id="eventName" required placeholder="Örn: Konferans 2024">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Tarih *</label>
+                        <input type="date" id="eventDate" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Katılımcı Ekleme Yöntemi</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" name="addMethod" value="manual" id="methodManual">
+                                <label for="methodManual">Manuel Ekle</label>
+                            </div>
+                            <div class="radio-option">
+                                <input type="radio" name="addMethod" value="excel" id="methodExcel" checked>
+                                <label for="methodExcel">Excel/CSV Yükle</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" id="manualInputGroup" style="display: none;">
+                        <label>İsimler (Her satıra bir isim)</label>
+                        <textarea id="manualNames" rows="8" style="width: 100%; padding: 12px; border: 2px solid #ecf0f1; border-radius: 8px; font-size: 14px;" placeholder="Ali Yılmaz&#10;Ayşe Demir&#10;Mehmet Kaya"></textarea>
+                    </div>
+
+                    <div class="form-group" id="excelInputGroup">
+                        <label>Excel/CSV Dosyası</label>
+                        <div class="file-upload" onclick="document.getElementById('excelFile').click()">
+                            <div style="font-size: 48px; margin-bottom: 10px;">📁</div>
+                            <p id="fileLabel">Dosya seçmek için tıklayın</p>
+                            <p style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
+                                Excel (.xlsx) veya CSV dosyası
+                            </p>
+                            <input type="file" id="excelFile" accept=".xlsx,.xls,.csv">
+                        </div>
+                    </div>
+
+                    <div id="participantsPreview" class="participants-preview" style="display: none;">
+                        <h4 style="margin-bottom: 15px; color: #2c3e50;">Katılımcılar (<span id="participantCount">0</span>)</h4>
+                        <div id="participantsList"></div>
+                    </div>
+
+                    <button type="submit" class="btn btn-success" style="width: 100%; padding: 16px; font-size: 18px; margin-top: 20px;">
+                        ✅ Oluştur ve QR Kodları Üret
+                    </button>
+                </form>
+            </div>
+
+            <!-- Scanning Screen -->
+            <div class="scanning-screen" id="scanningScreen">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

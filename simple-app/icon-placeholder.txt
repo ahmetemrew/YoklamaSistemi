@@ -1,0 +1,20 @@
+ICON PLACEHOLDER
+
+Icon dosyası için:
+
+1. Online icon generator kullanın:
+   - https://icon.kitchen/
+   - https://www.favicon-generator.org/
+
+2. Veya kendi icon'unuzu oluşturun:
+   - 256x256 PNG formatında bir icon oluşturun
+   - Online PNG to ICO converter kullanın
+   - icon.ico olarak kaydedin
+
+3. Icon dosyası yoksa:
+   - Windows varsayılan icon kullanılacaktır
+   - Uygulama normal çalışmaya devam eder
+
+4. Icon eklemek için:
+   - icon.ico dosyasını simple-app/ klasörüne koyun
+   - build-setup.bat dosyasını tekrar çalıştırın
