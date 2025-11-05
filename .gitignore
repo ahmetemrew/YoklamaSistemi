@@ -2,6 +2,9 @@ node_modules/
 dist/
 release/
 *.db
+*.db-shm
+*.db-wal
+database/
 *.log
 .DS_Store
 .env
@@ -9,3 +12,4 @@ release/
 *.zip
 uploads/
 qrcodes/
+package-lock.json
