@@ -95,7 +95,17 @@
             Okunan: <span id="scanCount">0</span>
         </div>
 
-        <div id="reader"></div>
+        <!-- Camera Permission Button -->
+        <div id="cameraButtonContainer" style="text-align: center; margin: 20px 0;">
+            <button id="requestCameraBtn" onclick="requestCameraPermission()" style="background: #27ae60; font-size: 18px; padding: 20px 40px;">
+                📷 Kamera İzni İste ve Başlat
+            </button>
+            <p style="color: #7f8c8d; font-size: 12px; margin-top: 10px;">
+                Bu butona basarak kamera iznini verebilirsin
+            </p>
+        </div>
+
+        <div id="reader" style="display: none;"></div>
 
         <div id="result"></div>
 
@@ -242,62 +252,136 @@
             input.value = '';
         }
 
-        // Try to initialize camera
-        updateStatus('📷 Kamera açılıyor...', 'warning');
+        // Camera permission request function
+        let cameraInitialized = false;
+        let scannerInstance = null;
 
-        // Try loading Html5Qrcode library
-        const script = document.createElement('script');
-        script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
-        script.onload = () => {
-            console.log('Html5Qrcode loaded');
-            initCamera();
-        };
-        script.onerror = () => {
-            console.error('Failed to load Html5Qrcode');
-            updateStatus('❌ QR kütüphanesi yüklenemedi. Manuel giriş kullanın.', 'error');
-            document.getElementById('reader').innerHTML = '<p style="padding: 20px; text-align: center; color: #666;">Kamera başlatılamadı. Aşağıdaki manuel giriş kutusunu kullanın.</p>';
-        };
-        document.head.appendChild(script);
+        async function requestCameraPermission() {
+            const btn = document.getElementById('requestCameraBtn');
+            const btnContainer = document.getElementById('cameraButtonContainer');
 
-        function initCamera() {
-            if (typeof Html5Qrcode === 'undefined') {
-                updateStatus('❌ QR kütüphanesi yüklenemedi', 'error');
+            if (cameraInitialized) {
+                updateStatus('ℹ️ Kamera zaten çalışıyor', 'success');
                 return;
             }
 
-            const scanner = new Html5Qrcode("reader");
+            btn.disabled = true;
+            btn.textContent = '⏳ Kamera izni isteniyor...';
+            updateStatus('⏳ Kamera izni isteniyor...', 'warning');
 
-            scanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                (decodedText) => {
-                    console.log('QR scanned:', decodedText);
-                    sendScan(decodedText);
-                },
-                (errorMessage) => {
-                    // Ignore scan errors (no QR in view)
+            try {
+                // First test if we can get camera access
+                console.log('Requesting camera permission...');
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' }
+                });
+
+                // Permission granted! Stop the test stream
+                stream.getTracks().forEach(track => track.stop());
+                console.log('✅ Camera permission granted!');
+
+                // Now load the QR scanner library
+                updateStatus('✅ İzin verildi! QR kütüphanesi yükleniyor...', 'success');
+
+                await loadQRLibrary();
+
+                // Hide button, show camera
+                btnContainer.style.display = 'none';
+                document.getElementById('reader').style.display = 'block';
+
+                // Initialize camera with QR scanner
+                await initCamera();
+                cameraInitialized = true;
+
+            } catch (error) {
+                console.error('Camera permission error:', error);
+                btn.disabled = false;
+                btn.textContent = '📷 Tekrar Dene';
+
+                if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+                    updateStatus('❌ Kamera izni reddedildi!', 'error');
+                    alert('❌ Kamera İzni Reddedildi!\n\nLütfen:\n1. Tarayıcı ayarlarından kamera iznini verin\n2. Sayfayı yenileyin\n3. Tekrar deneyin\n\nVeya aşağıdaki "Manuel Giriş" kutusunu kullanın.');
+                } else if (error.name === 'NotFoundError') {
+                    updateStatus('❌ Kamera bulunamadı!', 'error');
+                    alert('❌ Kamera Bulunamadı!\n\nCihazınızda kamera yok veya başka bir uygulama kullanıyor.\n\nManuel giriş kutusunu kullanın.');
+                } else {
+                    updateStatus('❌ Kamera hatası: ' + error.message, 'error');
+                    alert('❌ Kamera Hatası!\n\n' + error.message + '\n\nManuel giriş kutusunu kullanın.');
                 }
-            ).then(() => {
-                console.log('Camera started successfully');
-                updateStatus('📷 Kamera hazır! QR kod taratın.', 'success');
-            }).catch(err => {
-                console.error('Camera error:', err);
-                updateStatus('❌ Kamera açılamadı: ' + err, 'error');
-                document.getElementById('reader').innerHTML = `
-                    <div style="padding: 20px; text-align: center;">
-                        <p style="color: #e74c3c; font-weight: bold;">❌ Kamera Açılamadı</p>
-                        <p style="color: #666; margin-top: 10px;">Sebep: ${err}</p>
-                        <p style="color: #666; margin-top: 10px;">Lütfen:</p>
-                        <ul style="text-align: left; color: #666; margin: 10px auto; max-width: 300px;">
-                            <li>Kamera iznini verin</li>
-                            <li>Sayfayı yenileyin</li>
-                            <li>Farklı tarayıcı deneyin</li>
-                            <li>Manuel giriş kullanın (aşağıda)</li>
-                        </ul>
-                    </div>
-                `;
+            }
+        }
+
+        // Load QR scanner library
+        function loadQRLibrary() {
+            return new Promise((resolve, reject) => {
+                if (typeof Html5Qrcode !== 'undefined') {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js';
+                script.onload = () => {
+                    console.log('Html5Qrcode loaded');
+                    resolve();
+                };
+                script.onerror = () => {
+                    console.error('Failed to load Html5Qrcode');
+                    reject(new Error('QR kütüphanesi yüklenemedi'));
+                };
+                document.head.appendChild(script);
             });
         }
+
+        // Initialize camera with QR scanner
+        async function initCamera() {
+            if (typeof Html5Qrcode === 'undefined') {
+                throw new Error('QR kütüphanesi yüklenemedi');
+            }
+
+            updateStatus('📷 Kamera başlatılıyor...', 'warning');
+
+            scannerInstance = new Html5Qrcode("reader");
+
+            try {
+                await scannerInstance.start(
+                    { facingMode: "environment" },
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    (decodedText) => {
+                        console.log('QR scanned:', decodedText);
+                        sendScan(decodedText);
+                    },
+                    (errorMessage) => {
+                        // Ignore scan errors (no QR in view)
+                    }
+                );
+
+                console.log('✅ Camera started successfully');
+                updateStatus('📷 Kamera hazır! QR kod taratın.', 'success');
+
+            } catch (err) {
+                console.error('Camera start error:', err);
+                updateStatus('❌ Kamera başlatılamadı: ' + err, 'error');
+
+                document.getElementById('reader').innerHTML = `
+                    <div style="padding: 20px; text-align: center;">
+                        <p style="color: #e74c3c; font-weight: bold;">❌ Kamera Başlatılamadı</p>
+                        <p style="color: #666; margin-top: 10px;">Sebep: ${err}</p>
+                        <p style="color: #666; margin-top: 10px;">Manuel giriş kutusunu kullanın (aşağıda)</p>
+                    </div>
+                `;
+
+                // Show button again
+                document.getElementById('cameraButtonContainer').style.display = 'block';
+                document.getElementById('requestCameraBtn').disabled = false;
+                document.getElementById('requestCameraBtn').textContent = '📷 Tekrar Dene';
+
+                throw err;
+            }
+        }
+
+        // Set initial status
+        updateStatus('👆 Kamera başlatmak için yukarıdaki butona bas', 'info');
 
         // Allow Enter key for manual input
         document.getElementById('manualInput').addEventListener('keypress', (e) => {
