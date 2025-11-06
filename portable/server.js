@@ -1,5 +1,4 @@
 const express = require('express');
-const http = require('http');
 const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
@@ -19,30 +18,18 @@ const app = express();
 const attrs = [{ name: 'commonName', value: 'localhost' }];
 const pems = selfsigned.generate(attrs, { days: 365, keySize: 2048 });
 
-// Create both HTTP and HTTPS servers
-const httpServer = http.createServer(app);
-const httpsServer = https.createServer({
+// Create HTTPS server
+const server = https.createServer({
     key: pems.private,
     cert: pems.cert
 }, app);
 
-// Socket.IO on HTTPS server (fallback to HTTP if needed)
-const io = new Server(httpsServer, {
+// Socket.IO on HTTPS server
+const io = new Server(server, {
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
-// Also attach Socket.IO to HTTP server
-const ioHttp = new Server(httpServer, {
-    cors: { origin: '*', methods: ['GET', 'POST'] }
-});
-
-// Forward HTTP Socket.IO events to main io instance
-ioHttp.on('connection', (socket) => {
-    io.emit('connection', socket);
-});
-
-const PORT = 3000;
-const HTTPS_PORT = 3443;
+const PORT = 3443;
 
 // Middleware
 app.use(cors());
@@ -564,23 +551,19 @@ app.get('/api/devices', (req, res) => {
     });
 });
 
-// Start Servers
-httpServer.listen(PORT, '0.0.0.0', () => {
-    console.log(`✅ HTTP Server: http://localhost:${PORT}`);
-});
-
-httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
+// Start Server
+server.listen(PORT, '0.0.0.0', () => {
     const localIP = getLocalIP();
 
     console.log('\n' + '='.repeat(50));
     console.log('Yoklama Sistemi');
     console.log('='.repeat(50));
-    console.log(`Admin Panel: https://localhost:${HTTPS_PORT}`);
-    console.log(`Scanner: https://${localIP}:${HTTPS_PORT}/scanner`);
+    console.log(`Admin Panel: https://localhost:${PORT}`);
+    console.log(`Scanner: https://${localIP}:${PORT}/scanner`);
     console.log('='.repeat(50) + '\n');
 
     // Auto-open browser with HTTPS
-    const url = `https://localhost:${HTTPS_PORT}`;
+    const url = `https://localhost:${PORT}`;
     const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
     exec(`${start} ${url}`);
 });
