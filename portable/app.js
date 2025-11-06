@@ -26,13 +26,16 @@ async function loadServerInfo() {
         const response = await fetch(`${API_URL}/server-info`);
         const serverInfo = await response.json();
 
+        const scanner2Url = `http://${serverInfo.ip}:${serverInfo.port}/scanner2`;
         const testUrl = `http://${serverInfo.ip}:${serverInfo.port}/test`;
 
+        document.getElementById('scanner2Url').textContent = scanner2Url;
         document.getElementById('phoneUrl').textContent = serverInfo.scannerUrl;
         document.getElementById('testUrl').textContent = testUrl;
         document.getElementById('serverInfo').style.display = 'block';
 
         console.log('📱 Server IP:', serverInfo.ip);
+        console.log('🎯 Scanner2 URL (NEW):', scanner2Url);
         console.log('📱 Scanner URL:', serverInfo.scannerUrl);
         console.log('🧪 Test URL:', testUrl);
     } catch (error) {

@@ -341,6 +341,7 @@ app.get('/test', (req, res) => {
 const frontendHTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const frontendJS = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
 const testQRHTML = fs.readFileSync(path.join(__dirname, 'TEST_QR.html'), 'utf8');
+const scanner2HTML = fs.readFileSync(path.join(__dirname, 'scanner2.html'), 'utf8');
 
 app.get('/', (req, res) => {
     res.send(frontendHTML);
@@ -353,6 +354,10 @@ app.get('/app.js', (req, res) => {
 
 app.get('/TEST_QR.html', (req, res) => {
     res.send(testQRHTML);
+});
+
+app.get('/scanner2', (req, res) => {
+    res.send(scanner2HTML);
 });
 
 app.get('/scanner', (req, res) => {
