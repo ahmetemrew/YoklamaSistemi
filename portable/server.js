@@ -540,14 +540,41 @@ app.get('/api/devices', (req, res) => {
 });
 
 // Start Server
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, '0.0.0.0', async () => {
     const localIP = getLocalIP();
     console.log('\n' + '='.repeat(50));
     console.log('🚀 Yoklama Sistemi Başlatıldı!');
     console.log('='.repeat(50));
     console.log(`📍 Admin Panel: http://localhost:${PORT}`);
-    console.log(`📱 Scanner URL: http://${localIP}:${PORT}/scanner`);
+    console.log(`📱 Scanner URL (Local): http://${localIP}:${PORT}/scanner`);
     console.log('='.repeat(50) + '\n');
+
+    // HTTPS Tunnel support (optional)
+    if (process.env.USE_TUNNEL === 'true') {
+        console.log('🌐 HTTPS Tunnel başlatılıyor...\n');
+        try {
+            const localtunnel = require('localtunnel');
+            const tunnel = await localtunnel({ port: PORT });
+
+            console.log('✅ HTTPS Tunnel Aktif!');
+            console.log('='.repeat(50));
+            console.log(`🔒 HTTPS URL: ${tunnel.url}`);
+            console.log(`📱 HTTPS Scanner: ${tunnel.url}/scanner`);
+            console.log('='.repeat(50));
+            console.log('\n💡 HTTPS linkini telefondan aç - kamera direkt çalışır!');
+            console.log('⚠️  Bu URL internete açık! Etkinlik bitince BASLA.bat\'ı kapat.\n');
+
+            tunnel.on('close', () => {
+                console.log('🔴 HTTPS Tunnel kapandı');
+            });
+        } catch (error) {
+            console.error('❌ HTTPS Tunnel hatası:', error.message);
+            console.log('💡 Normal (HTTP) modda devam ediliyor...\n');
+        }
+    } else {
+        console.log('💡 HIZLI KAMERA OKUMA İSTİYORSAN:');
+        console.log('   BASLA_HTTPS.bat kullan (kamera doğrudan açılır)\n');
+    }
 
     // Auto-open browser
     const url = `http://localhost:${PORT}`;
