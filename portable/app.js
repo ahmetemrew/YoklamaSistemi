@@ -26,11 +26,15 @@ async function loadServerInfo() {
         const response = await fetch(`${API_URL}/server-info`);
         const serverInfo = await response.json();
 
+        const testUrl = `http://${serverInfo.ip}:${serverInfo.port}/test`;
+
         document.getElementById('phoneUrl').textContent = serverInfo.scannerUrl;
+        document.getElementById('testUrl').textContent = testUrl;
         document.getElementById('serverInfo').style.display = 'block';
 
         console.log('📱 Server IP:', serverInfo.ip);
         console.log('📱 Scanner URL:', serverInfo.scannerUrl);
+        console.log('🧪 Test URL:', testUrl);
     } catch (error) {
         console.error('Failed to load server info:', error);
     }
@@ -556,24 +560,35 @@ async function displayScanningScreen(event, participants) {
         </div>
     `;
 
-    // Generate QR Code for scanner URL
-    try {
-        if (typeof QRCode !== 'undefined') {
-            QRCode.toCanvas(scannerUrl, { width: 256, margin: 2 }, (error, canvas) => {
-                if (error) {
-                    console.error('QRCode generation error:', error);
-                    document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: red;">QR kod oluşturulamadı</p>';
-                } else {
-                    document.getElementById('qrCodeDisplay').appendChild(canvas);
-                }
-            });
-        } else {
-            console.error('QRCode library not loaded');
-            document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: red;">QR kütüphanesi yüklenemedi</p>';
+    // Generate QR Code for scanner URL (wait for library to load)
+    const generateQR = () => {
+        try {
+            if (typeof QRCode !== 'undefined') {
+                QRCode.toCanvas(scannerUrl, { width: 256, margin: 2 }, (error, canvas) => {
+                    if (error) {
+                        console.error('QRCode generation error:', error);
+                        document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: white;">QR kod oluşturulamadı</p>';
+                    } else {
+                        const qrDisplay = document.getElementById('qrCodeDisplay');
+                        qrDisplay.innerHTML = ''; // Clear loading message
+                        qrDisplay.appendChild(canvas);
+                        console.log('✅ QR Code generated successfully');
+                    }
+                });
+            } else {
+                console.warn('QRCode library not loaded yet, retrying...');
+                // Retry after 500ms
+                setTimeout(generateQR, 500);
+            }
+        } catch (e) {
+            console.error('QRCode error:', e);
+            document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: white;">QR kod hatası: ' + e.message + '</p>';
         }
-    } catch (e) {
-        console.error('QRCode error:', e);
-    }
+    };
+
+    // Start generating QR code
+    document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: white;">QR kod oluşturuluyor...</p>';
+    generateQR();
 }
 
 // WebSocket Connection

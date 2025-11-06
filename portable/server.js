@@ -300,6 +300,43 @@ app.get('/api/server-info', (req, res) => {
     });
 });
 
+// Simple test endpoint for phone connectivity
+app.get('/test', (req, res) => {
+    res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bağlantı Testi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #27ae60, #2ecc71);
+            color: white;
+            text-align: center;
+            padding: 50px 20px;
+        }
+        h1 { font-size: 48px; margin-bottom: 20px; }
+        p { font-size: 20px; }
+        .success { background: white; color: #27ae60; padding: 20px; border-radius: 10px; margin: 20px; }
+    </style>
+</head>
+<body>
+    <h1>✅ BAĞLANTI BAŞARILI!</h1>
+    <div class="success">
+        <p><strong>Telefon başarıyla bağlandı!</strong></p>
+        <p>IP: ${req.ip}</p>
+        <p>Server IP: ${getLocalIP()}</p>
+        <p>Zaman: ${new Date().toLocaleString('tr-TR')}</p>
+    </div>
+    <p>Artık /scanner adresine gidebilirsin!</p>
+    <a href="/scanner" style="background: white; color: #27ae60; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; font-weight: bold;">Scanner'a Git →</a>
+</body>
+</html>
+    `);
+});
+
 // Frontend HTML (embedded)
 const frontendHTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const frontendJS = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');
