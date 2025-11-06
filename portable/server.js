@@ -529,12 +529,30 @@ server.listen(PORT, '0.0.0.0', () => {
 
 function getLocalIP() {
     const interfaces = os.networkInterfaces();
+    const allIPs = [];
+
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
-                return iface.address;
+                allIPs.push({ name, address: iface.address });
+                console.log(`   📡 ${name}: ${iface.address}`);
             }
         }
     }
+
+    // Prefer addresses starting with 192.168
+    const preferred = allIPs.find(ip => ip.address.startsWith('192.168'));
+    if (preferred) {
+        console.log(`   ✅ Using IP: ${preferred.address} (${preferred.name})`);
+        return preferred.address;
+    }
+
+    // Otherwise return first non-internal IP
+    if (allIPs.length > 0) {
+        console.log(`   ✅ Using IP: ${allIPs[0].address} (${allIPs[0].name})`);
+        return allIPs[0].address;
+    }
+
+    console.log(`   ⚠️  No network interface found, using localhost`);
     return 'localhost';
 }
