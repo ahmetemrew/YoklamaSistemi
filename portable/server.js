@@ -145,27 +145,94 @@ app.post('/api/participants', (req, res) => {
 });
 
 app.get('/api/events/:eventId/qrcodes', async (req, res) => {
-    const participants = db.prepare('SELECT * FROM participants WHERE event_id = ?').all(req.params.eventId);
-    if (participants.length === 0) return res.status(404).json({ error: 'Katılımcı bulunamadı' });
+    try {
+        console.log(`[QR] Generating QR codes for event ${req.params.eventId}...`);
 
-    const qrDir = path.join(os.tmpdir(), 'yoklama_qr_' + Date.now());
-    fs.mkdirSync(qrDir, { recursive: true });
+        const participants = db.prepare('SELECT * FROM participants WHERE event_id = ?').all(req.params.eventId);
 
-    for (const p of participants) {
-        const qrPath = path.join(qrDir, `${p.id}_${p.name.replace(/[^a-zA-Z0-9]/g, '_')}.png`);
-        await QRCode.toFile(qrPath, p.qr_code_data, { width: 300, margin: 2, errorCorrectionLevel: 'H' });
+        if (participants.length === 0) {
+            console.error(`[QR] No participants found for event ${req.params.eventId}`);
+            return res.status(404).json({ error: 'Katılımcı bulunamadı' });
+        }
+
+        console.log(`[QR] Found ${participants.length} participants`);
+
+        const qrDir = path.join(os.tmpdir(), 'yoklama_qr_' + Date.now());
+        fs.mkdirSync(qrDir, { recursive: true });
+        console.log(`[QR] Created temp directory: ${qrDir}`);
+
+        for (const p of participants) {
+            const safeName = p.name.replace(/[^a-zA-Z0-9]/g, '_');
+            const qrPath = path.join(qrDir, `${p.id}_${safeName}.png`);
+
+            try {
+                await QRCode.toFile(qrPath, p.qr_code_data, {
+                    width: 300,
+                    margin: 2,
+                    errorCorrectionLevel: 'H'
+                });
+                console.log(`[QR] Generated QR for: ${p.name}`);
+            } catch (qrError) {
+                console.error(`[QR] Failed to generate QR for ${p.name}:`, qrError);
+                throw new Error(`QR kod oluşturulamadı: ${p.name}`);
+            }
+        }
+
+        console.log(`[QR] All QR codes generated, creating ZIP...`);
+
+        res.setHeader('Content-Type', 'application/zip');
+        res.setHeader('Content-Disposition', `attachment; filename="QR_Kodlari.zip"`);
+
+        const archive = archiver('zip', { zlib: { level: 9 } });
+
+        archive.on('error', (err) => {
+            console.error('[QR] Archive error:', err);
+            throw err;
+        });
+
+        archive.on('warning', (err) => {
+            if (err.code !== 'ENOENT') {
+                console.warn('[QR] Archive warning:', err);
+            }
+        });
+
+        archive.on('end', () => {
+            console.log(`[QR] Archive finalized, ${archive.pointer()} bytes`);
+            // Clean up temp directory
+            try {
+                fs.rmSync(qrDir, { recursive: true, force: true });
+                console.log('[QR] Temp directory cleaned up');
+            } catch (cleanupError) {
+                console.error('[QR] Cleanup error:', cleanupError);
+            }
+        });
+
+        archive.pipe(res);
+        archive.directory(qrDir, false);
+        await archive.finalize();
+
+        console.log('[QR] ZIP sent successfully');
+
+    } catch (error) {
+        console.error('[QR] Error generating QR codes:', error);
+
+        // Clean up temp directory if it exists
+        const tempDirs = fs.readdirSync(os.tmpdir())
+            .filter(f => f.startsWith('yoklama_qr_'))
+            .map(f => path.join(os.tmpdir(), f));
+
+        for (const dir of tempDirs) {
+            try {
+                fs.rmSync(dir, { recursive: true, force: true });
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+        }
+
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message || 'QR kodları oluşturulurken hata oluştu' });
+        }
     }
-
-    res.setHeader('Content-Type', 'application/zip');
-    res.setHeader('Content-Disposition', `attachment; filename="QR_Kodlari.zip"`);
-
-    const archive = archiver('zip', { zlib: { level: 9 } });
-    archive.pipe(res);
-    archive.directory(qrDir, false);
-    archive.on('end', () => {
-        fs.rmSync(qrDir, { recursive: true, force: true });
-    });
-    await archive.finalize();
 });
 
 app.post('/api/attendance/scan', (req, res) => {

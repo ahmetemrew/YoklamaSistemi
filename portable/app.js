@@ -62,8 +62,16 @@ document.addEventListener('DOMContentLoaded', () => {
 // Load Events
 async function loadEvents(forScanning = false) {
     try {
+        console.log('Loading events...');
         const response = await fetch(`${API_URL}/events`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Etkinlikler yüklenemedi: ${errorData.error || response.statusText}`);
+        }
+
         const events = await response.json();
+        console.log(`Loaded ${events.length} events`);
 
         if (forScanning) {
             showScanningSelectScreen(events);
@@ -71,8 +79,8 @@ async function loadEvents(forScanning = false) {
             displayEventsList(events);
         }
     } catch (error) {
-        console.error('Error loading events:', error);
-        alert('Etkinlikler yüklenirken hata oluştu!');
+        console.error('❌ Error loading events:', error);
+        alert(`Etkinlikler yüklenirken hata oluştu!\n\n${error.message}`);
     }
 }
 
@@ -240,16 +248,28 @@ async function createEvent(event) {
 
     try {
         // 1. Create Event
+        console.log('Step 1: Creating event...');
         const eventResponse = await fetch(`${API_URL}/events`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ name, date, is_active: 1 })
         });
 
+        if (!eventResponse.ok) {
+            const errorData = await eventResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Etkinlik oluşturulamadı: ${errorData.error || eventResponse.statusText}`);
+        }
+
         const eventData = await eventResponse.json();
+        console.log('Step 1: Event created successfully, ID:', eventData.id);
+
+        if (!eventData.id) {
+            throw new Error('Etkinlik ID alınamadı!');
+        }
 
         // 2. Add Participants
         submitBtn.textContent = '⏳ Katılımcılar ekleniyor...';
+        console.log(`Step 2: Adding ${participants.length} participants...`);
 
         const participantsData = participants.map(p => ({
             event_id: eventData.id,
@@ -258,21 +278,57 @@ async function createEvent(event) {
             phone: p.phone
         }));
 
+        let addedCount = 0;
         for (const p of participantsData) {
-            await fetch(`${API_URL}/participants`, {
+            const participantResponse = await fetch(`${API_URL}/participants`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(p)
             });
+
+            if (!participantResponse.ok) {
+                const errorData = await participantResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+                console.error(`Failed to add participant ${p.name}:`, errorData.error);
+                throw new Error(`Katılımcı eklenemedi (${p.name}): ${errorData.error || participantResponse.statusText}`);
+            }
+
+            addedCount++;
+        }
+
+        console.log(`Step 2: Successfully added ${addedCount} participants`);
+
+        if (addedCount === 0) {
+            throw new Error('Hiç katılımcı eklenemedi!');
         }
 
         // 3. Generate QR Codes
         submitBtn.textContent = '⏳ QR kodları oluşturuluyor...';
+        console.log('Step 3: Generating QR codes...');
 
         const qrResponse = await fetch(`${API_URL}/events/${eventData.id}/qrcodes`);
+
+        if (!qrResponse.ok) {
+            const errorData = await qrResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            console.error('QR generation failed:', errorData);
+            throw new Error(`QR kodları oluşturulamadı: ${errorData.error || qrResponse.statusText}`);
+        }
+
+        const contentType = qrResponse.headers.get('Content-Type');
+        console.log('QR Response Content-Type:', contentType);
+
+        if (!contentType || !contentType.includes('application/zip')) {
+            throw new Error('QR kodları ZIP dosyası olarak alınamadı!');
+        }
+
         const qrBlob = await qrResponse.blob();
+        console.log('Step 3: QR codes generated, blob size:', qrBlob.size, 'bytes');
+
+        if (qrBlob.size === 0) {
+            throw new Error('QR kodları dosyası boş!');
+        }
 
         // 4. Download QR Codes
+        console.log('Step 4: Downloading QR codes...');
         const url = window.URL.createObjectURL(qrBlob);
         const a = document.createElement('a');
         a.href = url;
@@ -281,6 +337,8 @@ async function createEvent(event) {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
+
+        console.log('Step 4: Download complete');
 
         // Success
         alert(`✅ Etkinlik başarıyla oluşturuldu!\n\n${participants.length} kişi için QR kodları indirildi.`);
@@ -294,8 +352,9 @@ async function createEvent(event) {
         showEventsScreen();
 
     } catch (error) {
-        console.error('Error creating event:', error);
-        alert('Etkinlik oluşturulurken hata oluştu!');
+        console.error('❌ Error creating event:', error);
+        alert(`❌ HATA:\n\n${error.message}\n\nKonsola bakın (F12) veya tekrar deneyin.`);
+        // DON'T navigate away on error - stay on the form
     } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = originalText;
@@ -309,12 +368,20 @@ async function deleteEvent(id, name) {
     }
 
     try {
-        await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
-        alert('Etkinlik silindi!');
+        console.log(`Deleting event ${id}...`);
+        const response = await fetch(`${API_URL}/events/${id}`, { method: 'DELETE' });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Etkinlik silinemedi: ${errorData.error || response.statusText}`);
+        }
+
+        console.log('Event deleted successfully');
+        alert('✅ Etkinlik silindi!');
         loadEvents();
     } catch (error) {
-        console.error('Error deleting event:', error);
-        alert('Silme işlemi başarısız!');
+        console.error('❌ Error deleting event:', error);
+        alert(`❌ Silme işlemi başarısız!\n\n${error.message}`);
     }
 }
 
@@ -326,13 +393,33 @@ function editEvent(id) {
 // Start Scanning
 async function startScanning(eventId) {
     try {
+        console.log(`Starting scanning for event ${eventId}...`);
+
         // Load event details
         const eventResponse = await fetch(`${API_URL}/events/${eventId}`);
+
+        if (!eventResponse.ok) {
+            const errorData = await eventResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Etkinlik bulunamadı: ${errorData.error || eventResponse.statusText}`);
+        }
+
         const event = await eventResponse.json();
+        console.log('Event loaded:', event.name);
 
         // Load participants
         const participantsResponse = await fetch(`${API_URL}/events/${eventId}/participants`);
+
+        if (!participantsResponse.ok) {
+            const errorData = await participantsResponse.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Katılımcılar yüklenemedi: ${errorData.error || participantsResponse.statusText}`);
+        }
+
         const participants = await participantsResponse.json();
+        console.log(`Loaded ${participants.length} participants`);
+
+        if (participants.length === 0) {
+            throw new Error('Bu etkinlikte katılımcı yok!');
+        }
 
         currentEvent = { ...event, participants };
 
@@ -343,8 +430,8 @@ async function startScanning(eventId) {
         connectWebSocket();
 
     } catch (error) {
-        console.error('Error starting scan:', error);
-        alert('Tarama başlatılırken hata oluştu!');
+        console.error('❌ Error starting scan:', error);
+        alert(`❌ Tarama başlatılırken hata oluştu!\n\n${error.message}`);
     }
 }
 
@@ -495,16 +582,27 @@ async function stopScanning() {
     }
 
     try {
+        console.log('Stopping scan and fetching attendance data...');
+
         // Get final attendance data
         const response = await fetch(`${API_URL}/events/${currentEvent.id}/attendance`);
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({ error: 'Bilinmeyen hata' }));
+            throw new Error(`Yoklama verileri alınamadı: ${errorData.error || response.statusText}`);
+        }
+
         const attendance = await response.json();
+        console.log(`Fetched ${attendance.length} attendance records`);
 
         // Show statistics
         showStatistics(currentEvent, attendance);
 
     } catch (error) {
-        console.error('Error stopping scan:', error);
-        alert('Veriler kaydedilirken hata oluştu!');
+        console.error('❌ Error stopping scan:', error);
+        alert(`❌ Veriler kaydedilirken hata oluştu!\n\n${error.message}`);
+        // Still navigate back home even on error
+        showHomeScreen();
     }
 }
 
