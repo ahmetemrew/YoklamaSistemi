@@ -3,6 +3,23 @@ const API_URL = 'http://localhost:3000/api';
 let socket = null;
 let currentEvent = null;
 
+// Global Error Handler for debugging
+window.addEventListener('error', (e) => {
+    console.error('🔥 GLOBAL ERROR:', e.error);
+    console.error('Message:', e.message);
+    console.error('Filename:', e.filename);
+    console.error('Line:', e.lineno, 'Column:', e.colno);
+    alert(`❌ JavaScript Hatası!\n\n${e.message}\n\nDosya: ${e.filename}\nSatır: ${e.lineno}`);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+    console.error('🔥 UNHANDLED PROMISE REJECTION:', e.reason);
+    alert(`❌ Promise Hatası!\n\n${e.reason}`);
+});
+
+console.log('✅ App.js loaded successfully');
+console.log('API_URL:', API_URL);
+
 // Screen Navigation
 function showHomeScreen() {
     hideAllScreens();
@@ -216,37 +233,57 @@ function displayParticipantsPreview(participants) {
 
 // Create Event
 async function createEvent(event) {
+    console.log('🚀 createEvent CALLED!');
+
     event.preventDefault();
+    console.log('✅ preventDefault called');
 
-    const name = document.getElementById('eventName').value;
-    const date = document.getElementById('eventDate').value;
-    const method = document.querySelector('input[name="addMethod"]:checked').value;
-
-    let participants = [];
-
-    if (method === 'manual') {
-        const names = document.getElementById('manualNames').value
-            .split('\n')
-            .map(n => n.trim())
-            .filter(n => n !== '');
-
-        participants = names.map(name => ({ name, email: null, phone: null }));
-    } else {
-        participants = window.currentParticipants || [];
-    }
-
-    if (participants.length === 0) {
-        alert('Lütfen en az bir katılımcı ekleyin!');
-        return;
-    }
-
-    // Show loading
     const submitBtn = event.target.querySelector('button[type="submit"]');
-    const originalText = submitBtn.textContent;
-    submitBtn.disabled = true;
-    submitBtn.textContent = '⏳ Oluşturuluyor...';
+    const originalText = submitBtn ? submitBtn.textContent : '✅ Oluştur ve QR Kodları Üret';
 
     try {
+        const name = document.getElementById('eventName').value;
+        const date = document.getElementById('eventDate').value;
+        const methodRadio = document.querySelector('input[name="addMethod"]:checked');
+
+        console.log('Form values:', { name, date, methodRadio: methodRadio?.value });
+
+        if (!methodRadio) {
+            alert('Lütfen katılımcı ekleme yöntemini seçin!');
+            return;
+        }
+
+        const method = methodRadio.value;
+
+        let participants = [];
+
+        if (method === 'manual') {
+            const namesText = document.getElementById('manualNames').value;
+            const names = namesText
+                .split('\n')
+                .map(n => n.trim())
+                .filter(n => n !== '');
+
+            participants = names.map(name => ({ name, email: null, phone: null }));
+            console.log('Manual participants:', participants.length);
+        } else {
+            participants = window.currentParticipants || [];
+            console.log('Excel participants:', participants.length);
+        }
+
+        if (participants.length === 0) {
+            alert('❌ Lütfen en az bir katılımcı ekleyin!');
+            return;
+        }
+
+        console.log(`✅ Found ${participants.length} participants, starting process...`);
+
+        // Show loading
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.textContent = '⏳ Oluşturuluyor...';
+        }
+
         // 1. Create Event
         console.log('Step 1: Creating event...');
         const eventResponse = await fetch(`${API_URL}/events`, {
@@ -268,7 +305,7 @@ async function createEvent(event) {
         }
 
         // 2. Add Participants
-        submitBtn.textContent = '⏳ Katılımcılar ekleniyor...';
+        if (submitBtn) submitBtn.textContent = '⏳ Katılımcılar ekleniyor...';
         console.log(`Step 2: Adding ${participants.length} participants...`);
 
         const participantsData = participants.map(p => ({
@@ -302,7 +339,7 @@ async function createEvent(event) {
         }
 
         // 3. Generate QR Codes
-        submitBtn.textContent = '⏳ QR kodları oluşturuluyor...';
+        if (submitBtn) submitBtn.textContent = '⏳ QR kodları oluşturuluyor...';
         console.log('Step 3: Generating QR codes...');
 
         const qrResponse = await fetch(`${API_URL}/events/${eventData.id}/qrcodes`);
@@ -356,8 +393,10 @@ async function createEvent(event) {
         alert(`❌ HATA:\n\n${error.message}\n\nKonsola bakın (F12) veya tekrar deneyin.`);
         // DON'T navigate away on error - stay on the form
     } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = originalText;
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+        }
     }
 }
 
