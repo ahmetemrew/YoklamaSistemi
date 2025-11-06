@@ -314,24 +314,154 @@ app.get('/test', (req, res) => {
             font-family: Arial, sans-serif;
             background: linear-gradient(135deg, #27ae60, #2ecc71);
             color: white;
-            text-align: center;
-            padding: 50px 20px;
+            padding: 20px;
         }
-        h1 { font-size: 48px; margin-bottom: 20px; }
-        p { font-size: 20px; }
-        .success { background: white; color: #27ae60; padding: 20px; border-radius: 10px; margin: 20px; }
+        h1 { font-size: 32px; margin-bottom: 20px; text-align: center; }
+        .box { background: white; color: #333; padding: 15px; border-radius: 10px; margin: 15px 0; }
+        .box h3 { margin-top: 0; color: #27ae60; }
+        .success { background: #d4edda; color: #155724; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .error { background: #f8d7da; color: #721c24; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        .info { background: #d1ecf1; color: #0c5460; padding: 10px; border-radius: 5px; margin: 5px 0; }
+        button { background: #27ae60; color: white; border: none; padding: 15px 30px; border-radius: 5px; font-size: 16px; cursor: pointer; width: 100%; margin: 10px 0; }
+        button:active { background: #1e8449; }
+        #log { font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto; background: #f8f9fa; color: #333; padding: 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h1>✅ BAĞLANTI BAŞARILI!</h1>
-    <div class="success">
-        <p><strong>Telefon başarıyla bağlandı!</strong></p>
-        <p>IP: ${req.ip}</p>
-        <p>Server IP: ${getLocalIP()}</p>
-        <p>Zaman: ${new Date().toLocaleString('tr-TR')}</p>
+    <h1>📱 Telefon Bağlantı Testi</h1>
+
+    <div class="box">
+        <h3>1️⃣ Bağlantı Durumu</h3>
+        <div class="success">✅ HTTP Bağlantısı Başarılı!</div>
+        <div class="info">
+            <strong>Senin IP'n:</strong> ${req.ip}<br>
+            <strong>Server IP:</strong> ${getLocalIP()}<br>
+            <strong>Zaman:</strong> ${new Date().toLocaleString('tr-TR')}
+        </div>
     </div>
-    <p>Artık /scanner adresine gidebilirsin!</p>
-    <a href="/scanner" style="background: white; color: #27ae60; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; font-weight: bold;">Scanner'a Git →</a>
+
+    <div class="box">
+        <h3>2️⃣ Scanner Sayfası Testi</h3>
+        <p>Scanner sayfası açılıyor mu test edelim:</p>
+        <button onclick="testScanner()">🧪 Scanner'ı Test Et</button>
+        <div id="scannerResult"></div>
+    </div>
+
+    <div class="box">
+        <h3>3️⃣ WebSocket Testi</h3>
+        <p>Canlı bağlantı çalışıyor mu test edelim:</p>
+        <button onclick="testWebSocket()">🔌 WebSocket Test Et</button>
+        <div id="wsResult"></div>
+    </div>
+
+    <div class="box">
+        <h3>4️⃣ Kamera Erişimi Testi</h3>
+        <p>Kameraya erişim var mı kontrol edelim:</p>
+        <button onclick="testCamera()">📷 Kamera Test Et</button>
+        <div id="cameraResult"></div>
+    </div>
+
+    <div class="box">
+        <h3>🔗 Direkt Linkler</h3>
+        <button onclick="window.location.href='/scanner'">📱 Scanner'a Git</button>
+        <button onclick="window.location.href='/'">🏠 Ana Sayfa</button>
+    </div>
+
+    <div class="box">
+        <h3>📋 Test Logları</h3>
+        <div id="log"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString('tr-TR');
+            logDiv.innerHTML += time + ' - ' + msg + '<br>';
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        async function testScanner() {
+            const result = document.getElementById('scannerResult');
+            result.innerHTML = '<div class="info">⏳ Test ediliyor...</div>';
+            log('Scanner testi başladı');
+
+            try {
+                const response = await fetch('/scanner');
+                const html = await response.text();
+
+                if (response.ok && html.length > 100) {
+                    result.innerHTML = '<div class="success">✅ Scanner sayfası yükleniyor! ('+html.length+' byte)</div>';
+                    log('✅ Scanner sayfası başarıyla yüklendi: ' + html.length + ' byte');
+                } else {
+                    result.innerHTML = '<div class="error">❌ Scanner sayfası yüklenemedi! HTTP ' + response.status + '</div>';
+                    log('❌ Scanner hatası: HTTP ' + response.status);
+                }
+            } catch (error) {
+                result.innerHTML = '<div class="error">❌ HATA: ' + error.message + '</div>';
+                log('❌ Scanner fetch hatası: ' + error.message);
+            }
+        }
+
+        function testWebSocket() {
+            const result = document.getElementById('wsResult');
+            result.innerHTML = '<div class="info">⏳ Bağlanıyor...</div>';
+            log('WebSocket testi başladı');
+
+            try {
+                const socket = io(window.location.origin);
+
+                socket.on('connect', () => {
+                    result.innerHTML = '<div class="success">✅ WebSocket bağlantısı BAŞARILI!</div>';
+                    log('✅ WebSocket bağlandı: ' + socket.id);
+
+                    socket.emit('identify', { type: 'test', name: 'Test Device' });
+
+                    setTimeout(() => {
+                        socket.disconnect();
+                        log('WebSocket bağlantısı kapatıldı');
+                    }, 2000);
+                });
+
+                socket.on('connect_error', (error) => {
+                    result.innerHTML = '<div class="error">❌ WebSocket hatası: ' + error.message + '</div>';
+                    log('❌ WebSocket hatası: ' + error.message);
+                });
+            } catch (error) {
+                result.innerHTML = '<div class="error">❌ HATA: ' + error.message + '</div>';
+                log('❌ WebSocket exception: ' + error.message);
+            }
+        }
+
+        async function testCamera() {
+            const result = document.getElementById('cameraResult');
+            result.innerHTML = '<div class="info">⏳ Kamera izni isteniyor...</div>';
+            log('Kamera testi başladı');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+                result.innerHTML = '<div class="success">✅ Kamera erişimi VAR! Kamera çalışıyor.</div>';
+                log('✅ Kamera erişimi başarılı');
+
+                // Stop camera
+                stream.getTracks().forEach(track => track.stop());
+            } catch (error) {
+                if (error.name === 'NotAllowedError') {
+                    result.innerHTML = '<div class="error">❌ Kamera izni VERİLMEDİ! Tarayıcı ayarlarından izin ver.</div>';
+                    log('❌ Kamera izni reddedildi');
+                } else if (error.name === 'NotFoundError') {
+                    result.innerHTML = '<div class="error">❌ Kamera BULUNAMADI!</div>';
+                    log('❌ Kamera bulunamadı');
+                } else {
+                    result.innerHTML = '<div class="error">❌ Kamera hatası: ' + error.message + '</div>';
+                    log('❌ Kamera hatası: ' + error.name + ' - ' + error.message);
+                }
+            }
+        }
+
+        log('Test sayfası yüklendi');
+        log('User Agent: ' + navigator.userAgent);
+    </script>
 </body>
 </html>
     `);
