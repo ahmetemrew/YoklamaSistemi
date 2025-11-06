@@ -649,22 +649,29 @@ function connectWebSocket() {
 function updateDeviceCount(data) {
     console.log('📱 Devices update:', data);
 
+    // Filter only scanner devices (NOT admin panel)
+    const scanners = data.devices.filter(d => d.type === 'scanner');
+
+    console.log(`📊 Total devices: ${data.devices.length}, Scanners: ${scanners.length}, Admins: ${data.devices.length - scanners.length}`);
+
     const devicesCount = document.getElementById('devicesCount');
     if (devicesCount) {
-        const scanners = data.devices.filter(d => d.type === 'scanner').length;
-        devicesCount.textContent = scanners;
+        devicesCount.textContent = scanners.length;
 
-        // Update device list if it exists
+        // Update device list
         const devicesList = document.getElementById('devicesList');
-        if (devicesList && data.devices.length > 0) {
-            devicesList.innerHTML = data.devices
-                .filter(d => d.type === 'scanner')
-                .map((d, i) => `
+        if (devicesList) {
+            if (scanners.length === 0) {
+                devicesList.innerHTML = '<div style="padding: 10px; text-align: center; color: #7f8c8d;">Henüz telefon bağlı değil</div>';
+            } else {
+                devicesList.innerHTML = scanners.map((d, i) => `
                     <div style="padding: 8px; background: #f0f0f0; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
                         <span>📱 Telefon ${i + 1}</span>
                         <span style="color: #27ae60; font-size: 12px;">● Bağlı</span>
+                        <span style="color: #7f8c8d; font-size: 11px;">${new Date(d.connectedAt).toLocaleTimeString('tr-TR')}</span>
                     </div>
                 `).join('');
+            }
         }
     }
 }
