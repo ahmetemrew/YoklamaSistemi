@@ -22,7 +22,7 @@ if %ERRORLEVEL% NEQ 0 (
 
 REM node_modules kontrolu
 if not exist "node_modules" (
-    echo [1/2] Ilk kullanimda dependencies yukleniyor...
+    echo [1/3] Ilk kullanimda dependencies yukleniyor...
     echo Bu sadece bir kez yapilacak ^(2-3 dakika^)
     echo.
     call npm install --silent
@@ -36,8 +36,26 @@ if not exist "node_modules" (
     echo.
 )
 
+REM Firewall kontrolu ve kurulum
+echo [2/3] Firewall kontrol ediliyor...
+netsh advfirewall firewall show rule name="Yoklama Sistemi - Gelen" >nul 2>nul
+if %ERRORLEVEL% NEQ 0 (
+    echo Firewall kurallari bulunamadi, otomatik ekleniyor...
+    netsh advfirewall firewall add rule name="Yoklama Sistemi - Gelen" dir=in action=allow protocol=TCP localport=3000 >nul 2>nul
+    netsh advfirewall firewall add rule name="Yoklama Sistemi - Giden" dir=out action=allow protocol=TCP localport=3000 >nul 2>nul
+    if %ERRORLEVEL% EQU 0 (
+        echo [OK] Firewall kurallari eklendi
+    ) else (
+        echo [UYARI] Firewall kurallari eklenemedi - yonetici olarak calistirmayi deneyin
+        echo         Telefondan baglantilar calismayabilir!
+    )
+) else (
+    echo [OK] Firewall kurallari mevcut
+)
+echo.
+
 REM Server'i baslat
-echo [2/2] Server baslatiliyor...
+echo [3/3] Server baslatiliyor...
 echo.
 echo ==========================================
 echo    HAZIR! Tarayici otomatik acilacak

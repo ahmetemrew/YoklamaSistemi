@@ -466,35 +466,44 @@
                 </p>
 
                 <div id="serverInfo" style="background: #e8f5e9; border-left: 4px solid #27ae60; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: none;">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
                         <span style="font-size: 20px;">📱</span>
-                        <strong style="color: #2c3e50;">Telefon Scanner Adresleri:</strong>
+                        <strong style="color: #2c3e50; font-size: 16px;">Telefon Bağlantı Rehberi</strong>
                     </div>
 
-                    <div style="background: white; padding: 12px; border-radius: 6px; margin: 10px 0;">
-                        <strong style="color: #667eea;">🎯 YENİ - GARANTİLİ SCANNER:</strong>
-                        <div id="scanner2Url" style="font-size: 16px; color: #667eea; font-weight: bold; font-family: monospace; margin-top: 5px;"></div>
-                        <p style="color: #7f8c8d; font-size: 11px; margin-top: 5px; margin-bottom: 0;">
-                            ✅ Manuel giriş ✅ Otomatik retry ✅ Detaylı hata mesajları
+                    <!-- Step 1: Scanner URL -->
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 2px solid #667eea;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="background: #667eea; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">1</span>
+                            <strong style="color: #667eea;">Scanner Adresi (Tavsiye)</strong>
+                        </div>
+                        <div id="scanner2Url" style="font-size: 15px; color: #667eea; font-weight: bold; font-family: monospace; margin: 10px 0; padding: 8px; background: #f0f4ff; border-radius: 4px;"></div>
+                        <p style="color: #7f8c8d; font-size: 11px; margin: 0;">
+                            ✅ Manuel giriş yedek ✅ Otomatik retry ✅ Detaylı durum mesajları
                         </p>
                     </div>
 
-                    <div style="background: white; padding: 12px; border-radius: 6px; margin: 10px 0;">
-                        <strong style="color: #27ae60;">📱 Normal Scanner:</strong>
-                        <div id="phoneUrl" style="font-size: 16px; color: #27ae60; font-weight: bold; font-family: monospace; margin-top: 5px;"></div>
-                    </div>
-
-                    <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #27ae60;">
-                        <strong style="color: #2c3e50; font-size: 14px;">🧪 Test Bağlantısı:</strong>
-                        <div id="testUrl" style="font-size: 14px; color: #3498db; font-weight: bold; font-family: monospace; margin-top: 5px;"></div>
-                        <p style="color: #7f8c8d; font-size: 11px; margin-top: 5px; margin-bottom: 0;">
-                            İlk önce bu adresi telefonda aç. "BAĞLANTI BAŞARILI" görürsen network çalışıyor.
+                    <!-- Step 2: Connection Test -->
+                    <div style="background: white; padding: 15px; border-radius: 8px; margin-bottom: 12px; border: 2px solid #3498db;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <span style="background: #3498db; color: white; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">2</span>
+                            <strong style="color: #3498db;">Bağlantı Testi (Sorun varsa)</strong>
+                        </div>
+                        <div id="testUrl" style="font-size: 14px; color: #3498db; font-weight: bold; font-family: monospace; margin: 10px 0; padding: 8px; background: #f0f8ff; border-radius: 4px;"></div>
+                        <p style="color: #7f8c8d; font-size: 11px; margin: 0;">
+                            Bu adresi aç ve "BAĞLANTI BAŞARILI" mesajını gör. Göremiyorsan aşağıdaki adımlara bak ↓
                         </p>
                     </div>
 
-                    <p style="color: #7f8c8d; font-size: 12px; margin-top: 10px; margin-bottom: 0;">
-                        ⚠️ Bağlanamıyorsan: <strong>FIREWALL_AYARLARI.bat</strong> (yönetici olarak)
-                    </p>
+                    <!-- Troubleshooting -->
+                    <div style="background: #fff3cd; padding: 12px; border-radius: 8px; border-left: 4px solid #f39c12;">
+                        <strong style="color: #2c3e50; font-size: 13px;">⚠️ Bağlanamıyorsan:</strong>
+                        <ul style="margin: 8px 0 0 20px; padding: 0; font-size: 12px; color: #666;">
+                            <li><strong>Firewall:</strong> BASLA.bat otomatik ayarlıyor (yönetici yetkisi gerekebilir)</li>
+                            <li><strong>Hotspot Sorunu:</strong> Windows hotspot çalışmıyorsa → Telefon hotspot kullan (ters bağlan)</li>
+                            <li><strong>Aynı Ağ:</strong> Telefon ve bilgisayar aynı WiFi'ye bağlı olmalı</li>
+                        </ul>
+                    </div>
                 </div>
 
                 <div class="big-buttons">
@@ -506,6 +515,54 @@
                         <span class="icon">📱</span>
                         Yoklama Al
                     </button>
+                </div>
+
+                <!-- Debug Section Toggle -->
+                <div style="text-align: center; margin-top: 30px;">
+                    <button class="btn btn-secondary" onclick="toggleDebugSection()" style="font-size: 12px; padding: 8px 16px;">
+                        🔧 Debug / Test Araçları
+                    </button>
+                </div>
+
+                <!-- Debug Section (Hidden by default) -->
+                <div id="debugSection" style="display: none; margin-top: 30px; background: #f8f9fa; border-radius: 12px; padding: 25px; border: 2px solid #95a5a6;">
+                    <h3 style="color: #2c3e50; margin-bottom: 20px;">🔍 Test & Debug Araçları</h3>
+
+                    <!-- Database Status -->
+                    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">1️⃣ Database Kontrol</h4>
+                        <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">Database'de kaç etkinlik ve katılımcı var?</p>
+                        <button class="btn" onclick="debugCheckDatabase()">Database'i Kontrol Et</button>
+                        <div id="debugDbResults" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; display: none;"></div>
+                    </div>
+
+                    <!-- QR Code List -->
+                    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">2️⃣ QR Kod Listesi</h4>
+                        <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">Oluşturulmuş QR kodları listele:</p>
+                        <label style="display: block; margin-bottom: 5px; color: #2c3e50; font-size: 14px;">Etkinlik ID:</label>
+                        <input type="number" id="debugEventId" placeholder="Örn: 1" value="1" style="width: 100px; padding: 8px; border: 2px solid #ecf0f1; border-radius: 6px; margin-bottom: 10px;">
+                        <button class="btn" onclick="debugListQRCodes()">QR Kodları Listele</button>
+                        <div id="debugQrList" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; display: none;"></div>
+                    </div>
+
+                    <!-- Generate Test QR -->
+                    <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">3️⃣ Test QR Kodu Oluştur</h4>
+                        <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">Ekranda gösterebileceğin bir test QR kodu:</p>
+                        <input type="text" id="debugTestData" placeholder="QR kod içeriği (UUID)" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #ecf0f1; border-radius: 6px;">
+                        <button class="btn" onclick="debugGenerateTestQR()">QR Oluştur</button>
+                        <div id="debugTestQR" style="text-align: center; margin-top: 20px;"></div>
+                    </div>
+
+                    <!-- Manual Test -->
+                    <div style="background: white; border-radius: 8px; padding: 20px;">
+                        <h4 style="color: #667eea; margin-bottom: 10px;">4️⃣ Manuel Test</h4>
+                        <p style="color: #7f8c8d; font-size: 14px; margin-bottom: 10px;">QR kod içeriğini manuel gir ve test et:</p>
+                        <textarea id="debugManualQR" rows="3" placeholder="QR kod içeriğini buraya yapıştır (UUID)" style="width: 100%; padding: 10px; margin: 10px 0; border: 2px solid #ecf0f1; border-radius: 6px; font-family: monospace;"></textarea>
+                        <button class="btn" onclick="debugTestManualQR()">Bu QR'ı Test Et</button>
+                        <div id="debugManualResult" style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 10px; font-family: monospace; white-space: pre-wrap; max-height: 300px; overflow-y: auto; display: none;"></div>
+                    </div>
                 </div>
             </div>
 

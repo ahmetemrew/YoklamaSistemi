@@ -26,17 +26,15 @@ async function loadServerInfo() {
         const response = await fetch(`${API_URL}/server-info`);
         const serverInfo = await response.json();
 
-        const scanner2Url = `http://${serverInfo.ip}:${serverInfo.port}/scanner2`;
+        const scannerUrl = serverInfo.scannerUrl; // Using consolidated /scanner endpoint
         const testUrl = `http://${serverInfo.ip}:${serverInfo.port}/test`;
 
-        document.getElementById('scanner2Url').textContent = scanner2Url;
-        document.getElementById('phoneUrl').textContent = serverInfo.scannerUrl;
+        document.getElementById('scanner2Url').textContent = scannerUrl;
         document.getElementById('testUrl').textContent = testUrl;
         document.getElementById('serverInfo').style.display = 'block';
 
         console.log('📱 Server IP:', serverInfo.ip);
-        console.log('🎯 Scanner2 URL (NEW):', scanner2Url);
-        console.log('📱 Scanner URL:', serverInfo.scannerUrl);
+        console.log('📱 Scanner URL:', scannerUrl);
         console.log('🧪 Test URL:', testUrl);
     } catch (error) {
         console.error('Failed to load server info:', error);
@@ -831,4 +829,178 @@ function exportAttendanceCSV(event, attendance) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+}
+
+// ============================================
+// DEBUG TOOLS (Integrated from TEST_QR.html)
+// ============================================
+
+function toggleDebugSection() {
+    const debugSection = document.getElementById('debugSection');
+    if (debugSection.style.display === 'none') {
+        debugSection.style.display = 'block';
+    } else {
+        debugSection.style.display = 'none';
+    }
+}
+
+async function debugCheckDatabase() {
+    const results = document.getElementById('debugDbResults');
+    results.style.display = 'block';
+    results.innerHTML = '⏳ Kontrol ediliyor...';
+
+    try {
+        const eventsRes = await fetch(`${API_URL}/events`);
+        const events = await eventsRes.json();
+
+        let output = `📊 DATABASE DURUMU\n${'='.repeat(50)}\n\n`;
+        output += `✅ Toplam Etkinlik: ${events.length}\n\n`;
+
+        for (const event of events) {
+            const participantsRes = await fetch(`${API_URL}/events/${event.id}/participants`);
+            const participants = await participantsRes.json();
+
+            output += `📋 Etkinlik: ${event.name} (ID: ${event.id})\n`;
+            output += `   Tarih: ${event.date}\n`;
+            output += `   Katılımcı: ${participants.length} kişi\n`;
+
+            if (participants.length > 0) {
+                output += `   İlk 3 katılımcı:\n`;
+                participants.slice(0, 3).forEach(p => {
+                    output += `   - ${p.name} (QR: ${p.qr_code_data.substring(0, 8)}...)\n`;
+                });
+            } else {
+                output += `   ⚠️ KATILIMCI YOK!\n`;
+            }
+            output += '\n';
+        }
+
+        results.textContent = output;
+    } catch (error) {
+        results.textContent = `❌ HATA: ${error.message}\n\nServer çalışıyor mu? BASLA.bat açık mı?`;
+        results.style.color = 'red';
+    }
+}
+
+async function debugListQRCodes() {
+    const eventId = document.getElementById('debugEventId').value;
+    const list = document.getElementById('debugQrList');
+    list.style.display = 'block';
+    list.innerHTML = '⏳ Yükleniyor...';
+
+    try {
+        const res = await fetch(`${API_URL}/events/${eventId}/participants`);
+        const participants = await res.json();
+
+        if (participants.length === 0) {
+            list.textContent = '⚠️ Bu etkinlikte katılımcı yok!';
+            list.style.color = 'orange';
+            return;
+        }
+
+        let output = `QR KODLARI (Etkinlik ${eventId})\n${'='.repeat(50)}\n\n`;
+
+        participants.forEach((p, i) => {
+            output += `${i + 1}. ${p.name}\n`;
+            output += `   QR Data: ${p.qr_code_data}\n`;
+            output += `   ID: ${p.id}\n\n`;
+        });
+
+        // Copy first QR code to test input
+        if (participants.length > 0) {
+            document.getElementById('debugTestData').value = participants[0].qr_code_data;
+            output += `\n💡 İlk katılımcının QR'ı test kutusuna kopyalandı!\n`;
+            output += `"QR Oluştur" butonuna bas ve test et.`;
+        }
+
+        list.textContent = output;
+        list.style.color = '';
+    } catch (error) {
+        list.textContent = `❌ HATA: ${error.message}`;
+        list.style.color = 'red';
+    }
+}
+
+function debugGenerateTestQR() {
+    const data = document.getElementById('debugTestData').value;
+    const display = document.getElementById('debugTestQR');
+
+    if (!data) {
+        alert('Lütfen QR kod içeriği girin!');
+        return;
+    }
+
+    display.innerHTML = '<p>⏳ Oluşturuluyor...</p>';
+
+    if (typeof QRCode === 'undefined') {
+        display.innerHTML = '<p style="color: red;">❌ QRCode kütüphanesi yüklenemedi!</p>';
+        return;
+    }
+
+    QRCode.toCanvas(data, { width: 300, margin: 2, errorCorrectionLevel: 'H' }, (error, canvas) => {
+        if (error) {
+            display.innerHTML = `<p style="color: red;">❌ QR oluşturulamadı: ${error}</p>`;
+        } else {
+            display.innerHTML = `
+                <p><strong>✅ QR Kod Oluşturuldu!</strong></p>
+                <p style="font-size: 12px; color: #7f8c8d;">Bu QR'ı bilgisayar ekranından scanner ile tarat</p>
+            `;
+            display.appendChild(canvas);
+            display.innerHTML += `<p style="font-size: 11px; font-family: monospace; word-break: break-all; margin-top: 10px;">İçerik: ${data}</p>`;
+        }
+    });
+}
+
+async function debugTestManualQR() {
+    const qrData = document.getElementById('debugManualQR').value.trim();
+    const result = document.getElementById('debugManualResult');
+
+    if (!qrData) {
+        alert('Lütfen QR kod içeriği girin!');
+        return;
+    }
+
+    result.style.display = 'block';
+    result.innerHTML = '⏳ Test ediliyor...';
+
+    try {
+        const res = await fetch(`${API_URL}/attendance/scan`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ qr_code: qrData, device_id: 'test-browser' })
+        });
+
+        const data = await res.json();
+
+        let output = `TEST SONUCU\n${'='.repeat(50)}\n\n`;
+
+        if (data.success) {
+            output += `✅ BAŞARILI!\n\n`;
+            output += `Kişi: ${data.participant.name}\n`;
+            output += `Mesaj: ${data.message}\n`;
+            if (data.stats) {
+                output += `\nİstatistikler:\n`;
+                output += `  Toplam: ${data.stats.total}\n`;
+                output += `  Geldi: ${data.stats.attended}\n`;
+                output += `  Kalan: ${data.stats.remaining}\n`;
+            }
+        } else if (data.warning) {
+            output += `⚠️ UYARI\n\n`;
+            output += `Kişi: ${data.participant.name}\n`;
+            output += `Mesaj: ${data.message}\n`;
+        } else {
+            output += `❌ BAŞARISIZ\n\n`;
+            output += `Hata: ${data.error}\n`;
+            output += `\nMuhtemel sebepler:\n`;
+            output += `1. QR kod database'de yok\n`;
+            output += `2. QR kod formatı yanlış\n`;
+            output += `3. UUID eşleşmiyor\n`;
+        }
+
+        result.textContent = output;
+        result.style.color = '';
+    } catch (error) {
+        result.textContent = `❌ BAĞLANTI HATASI: ${error.message}`;
+        result.style.color = 'red';
+    }
 }
