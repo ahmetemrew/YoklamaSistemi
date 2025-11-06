@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Kod Test Aracı</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #667eea; }
+        h2 { color: #2c3e50; margin-top: 0; }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #5568d3; }
+        .success { background: #27ae60; }
+        .danger { background: #e74c3c; }
+        #results {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 6px;
+            margin-top: 10px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .qr-display {
+            text-align: center;
+            margin: 20px 0;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 QR Kod Test Aracı</h1>
+
+    <div class="section">
+        <h2>1️⃣ Database Kontrol</h2>
+        <p>Database'de kaç etkinlik ve katılımcı var?</p>
+        <button onclick="checkDatabase()">Database'i Kontrol Et</button>
+        <div id="dbResults"></div>
+    </div>
+
+    <div class="section">
+        <h2>2️⃣ QR Kod Listesi</h2>
+        <p>Oluşturulmuş QR kodları listele:</p>
+        <label>Etkinlik ID:</label>
+        <input type="number" id="eventId" placeholder="Örn: 1" value="1">
+        <button onclick="listQRCodes()">QR Kodları Listele</button>
+        <div id="qrList"></div>
+    </div>
+
+    <div class="section">
+        <h2>3️⃣ Test QR Kodu Oluştur</h2>
+        <p>Ekranda gösterebileceğin bir test QR kodu:</p>
+        <input type="text" id="testData" placeholder="QR kod içeriği (UUID)" value="">
+        <button onclick="generateTestQR()">QR Oluştur</button>
+        <div class="qr-display" id="testQR"></div>
+    </div>
+
+    <div class="section">
+        <h2>4️⃣ Manuel Test</h2>
+        <p>QR kod içeriğini manuel gir ve test et:</p>
+        <textarea id="manualQR" rows="3" placeholder="QR kod içeriğini buraya yapıştır (UUID)"></textarea>
+        <button onclick="testManualQR()">Bu QR'ı Test Et</button>
+        <div id="manualResult"></div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+    <script>
+        const API_URL = 'http://localhost:3000/api';
+
+        async function checkDatabase() {
+            const results = document.getElementById('dbResults');
+            results.innerHTML = '<p>⏳ Kontrol ediliyor...</p>';
+
+            try {
+                // Get events
+                const eventsRes = await fetch(`${API_URL}/events`);
+                const events = await eventsRes.json();
+
+                let output = `📊 DATABASE DURUMU\n${'='.repeat(50)}\n\n`;
+                output += `✅ Toplam Etkinlik: ${events.length}\n\n`;
+
+                for (const event of events) {
+                    // Get participants for each event
+                    const participantsRes = await fetch(`${API_URL}/events/${event.id}/participants`);
+                    const participants = await participantsRes.json();
+
+                    output += `📋 Etkinlik: ${event.name} (ID: ${event.id})\n`;
+                    output += `   Tarih: ${event.date}\n`;
+                    output += `   Katılımcı: ${participants.length} kişi\n`;
+
+                    if (participants.length > 0) {
+                        output += `   İlk 3 katılımcı:\n`;
+                        participants.slice(0, 3).forEach(p => {
+                            output += `   - ${p.name} (QR: ${p.qr_code_data.substring(0, 8)}...)\n`;
+                        });
+                    } else {
+                        output += `   ⚠️ KATILIMCI YOK!\n`;
+                    }
+                    output += '\n';
+                }
+
+                results.innerHTML = `<div id="results">${output}</div>`;
+            } catch (error) {
+                results.innerHTML = `<div id="results" style="color: red;">❌ HATA: ${error.message}\n\nServer çalışıyor mu? BASLA.bat açık mı?</div>`;
+            }
+        }
+
+        async function listQRCodes() {
+            const eventId = document.getElementById('eventId').value;
+            const list = document.getElementById('qrList');
+            list.innerHTML = '<p>⏳ Yükleniyor...</p>';
+
+            try {
+                const res = await fetch(`${API_URL}/events/${eventId}/participants`);
+                const participants = await res.json();
+
+                if (participants.length === 0) {
+                    list.innerHTML = '<div id="results" style="color: orange;">⚠️ Bu etkinlikte katılımcı yok!</div>';
+                    return;
+                }
+
+                let output = `QR KODLARI (Etkinlik ${eventId})\n${'='.repeat(50)}\n\n`;
+
+                participants.forEach((p, i) => {
+                    output += `${i + 1}. ${p.name}\n`;
+                    output += `   QR Data: ${p.qr_code_data}\n`;
+                    output += `   ID: ${p.id}\n\n`;
+                });
+
+                // Generate first QR code as example
+                if (participants.length > 0) {
+                    document.getElementById('testData').value = participants[0].qr_code_data;
+                    output += `\n💡 İlk katılımcının QR'ı test kutusuna kopyalandı!\n`;
+                    output += `"QR Oluştur" butonuna bas ve test et.`;
+                }
+
+                list.innerHTML = `<div id="results">${output}</div>`;
+            } catch (error) {
+                list.innerHTML = `<div id="results" style="color: red;">❌ HATA: ${error.message}</div>`;
+            }
+        }
+
+        function generateTestQR() {
+            const data = document.getElementById('testData').value;
+            const display = document.getElementById('testQR');
+
+            if (!data) {
+                alert('Lütfen QR kod içeriği girin!');
+                return;
+            }
+
+            display.innerHTML = '<p>⏳ Oluşturuluyor...</p>';
+
+            QRCode.toCanvas(data, { width: 300, margin: 2, errorCorrectionLevel: 'H' }, (error, canvas) => {
+                if (error) {
+                    display.innerHTML = `<p style="color: red;">❌ QR oluşturulamadı: ${error}</p>`;
+                } else {
+                    display.innerHTML = `
+                        <p><strong>✅ QR Kod Oluşturuldu!</strong></p>
+                        <p style="font-size: 12px; color: #7f8c8d;">Bu QR'ı bilgisayar ekranından scanner ile tarat</p>
+                    `;
+                    display.appendChild(canvas);
+                    display.innerHTML += `<p style="font-size: 11px; font-family: monospace; word-break: break-all; margin-top: 10px;">İçerik: ${data}</p>`;
+                }
+            });
+        }
+
+        async function testManualQR() {
+            const qrData = document.getElementById('manualQR').value.trim();
+            const result = document.getElementById('manualResult');
+
+            if (!qrData) {
+                alert('Lütfen QR kod içeriği girin!');
+                return;
+            }
+
+            result.innerHTML = '<p>⏳ Test ediliyor...</p>';
+
+            try {
+                const res = await fetch(`${API_URL}/attendance/scan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ qr_code: qrData, device_id: 'test-browser' })
+                });
+
+                const data = await res.json();
+
+                let output = `TEST SONUCU\n${'='.repeat(50)}\n\n`;
+
+                if (data.success) {
+                    output += `✅ BAŞARILI!\n\n`;
+                    output += `Kişi: ${data.participant.name}\n`;
+                    output += `Mesaj: ${data.message}\n`;
+                    if (data.stats) {
+                        output += `\nİstatistikler:\n`;
+                        output += `  Toplam: ${data.stats.total}\n`;
+                        output += `  Geldi: ${data.stats.attended}\n`;
+                        output += `  Kalan: ${data.stats.remaining}\n`;
+                    }
+                } else if (data.warning) {
+                    output += `⚠️ UYARI\n\n`;
+                    output += `Kişi: ${data.participant.name}\n`;
+                    output += `Mesaj: ${data.message}\n`;
+                } else {
+                    output += `❌ BAŞARISIZ\n\n`;
+                    output += `Hata: ${data.error}\n`;
+                    output += `\nMuhtemel sebepler:\n`;
+                    output += `1. QR kod database'de yok\n`;
+                    output += `2. QR kod formatı yanlış\n`;
+                    output += `3. UUID eşleşmiyor\n`;
+                }
+
+                result.innerHTML = `<div id="results">${output}</div>`;
+            } catch (error) {
+                result.innerHTML = `<div id="results" style="color: red;">❌ BAĞLANTI HATASI: ${error.message}</div>`;
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkDatabase();
+        };
+    </script>
+</body>
+</html>
