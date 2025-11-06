@@ -558,26 +558,60 @@ server.listen(PORT, '0.0.0.0', () => {
 function getLocalIP() {
     const interfaces = os.networkInterfaces();
     const allIPs = [];
+    const realIPs = []; // Non-virtual network interfaces
+
+    // Virtual network keywords to skip
+    const virtualKeywords = ['vEthernet', 'VMware', 'VirtualBox', 'Hyper-V', 'Docker', 'vboxnet', 'vmnet'];
 
     for (const name of Object.keys(interfaces)) {
         for (const iface of interfaces[name]) {
             if (iface.family === 'IPv4' && !iface.internal) {
-                allIPs.push({ name, address: iface.address });
+                const ip = { name, address: iface.address };
+                allIPs.push(ip);
                 console.log(`   📡 ${name}: ${iface.address}`);
+
+                // Check if this is a real (non-virtual) interface
+                const isVirtual = virtualKeywords.some(keyword =>
+                    name.toLowerCase().includes(keyword.toLowerCase())
+                );
+
+                if (!isVirtual) {
+                    realIPs.push(ip);
+                }
             }
         }
     }
 
-    // Prefer addresses starting with 192.168
-    const preferred = allIPs.find(ip => ip.address.startsWith('192.168'));
-    if (preferred) {
-        console.log(`   ✅ Using IP: ${preferred.address} (${preferred.name})`);
-        return preferred.address;
+    // Priority 1: Real interfaces with 192.168.x.x
+    const real192 = realIPs.find(ip => ip.address.startsWith('192.168'));
+    if (real192) {
+        console.log(`   ✅ Using IP: ${real192.address} (${real192.name}) [Real WiFi/Ethernet]`);
+        return real192.address;
     }
 
-    // Otherwise return first non-internal IP
+    // Priority 2: Real interfaces with 10.x.x.x
+    const real10 = realIPs.find(ip => ip.address.startsWith('10.'));
+    if (real10) {
+        console.log(`   ✅ Using IP: ${real10.address} (${real10.name}) [Real WiFi/Ethernet]`);
+        return real10.address;
+    }
+
+    // Priority 3: Any real interface
+    if (realIPs.length > 0) {
+        console.log(`   ✅ Using IP: ${realIPs[0].address} (${realIPs[0].name}) [Real Interface]`);
+        return realIPs[0].address;
+    }
+
+    // Priority 4: Virtual interfaces with 192.168.x.x (fallback)
+    const virtual192 = allIPs.find(ip => ip.address.startsWith('192.168'));
+    if (virtual192) {
+        console.log(`   ⚠️  Using IP: ${virtual192.address} (${virtual192.name}) [Virtual - May not work with phone]`);
+        return virtual192.address;
+    }
+
+    // Priority 5: Any IP (last resort)
     if (allIPs.length > 0) {
-        console.log(`   ✅ Using IP: ${allIPs[0].address} (${allIPs[0].name})`);
+        console.log(`   ⚠️  Using IP: ${allIPs[0].address} (${allIPs[0].name}) [Virtual - May not work with phone]`);
         return allIPs[0].address;
     }
 
