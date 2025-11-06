@@ -1,10 +1,10 @@
 @echo off
-TITLE Yoklama Sistemi - Baslat
+TITLE Yoklama Sistemi
 color 0A
 
 echo.
 echo ==========================================
-echo       YOKLAMA SISTEMI BASLATIYOR
+echo           YOKLAMA SISTEMI
 echo ==========================================
 echo.
 
@@ -38,16 +38,14 @@ if not exist "node_modules" (
 
 REM Firewall kontrolu ve kurulum
 echo [2/3] Firewall kontrol ediliyor...
-netsh advfirewall firewall show rule name="Yoklama Sistemi - Gelen" >nul 2>nul
+netsh advfirewall firewall show rule name="Yoklama Sistemi - HTTPS" >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo Firewall kurallari bulunamadi, otomatik ekleniyor...
-    netsh advfirewall firewall add rule name="Yoklama Sistemi - Gelen" dir=in action=allow protocol=TCP localport=3000 >nul 2>nul
-    netsh advfirewall firewall add rule name="Yoklama Sistemi - Giden" dir=out action=allow protocol=TCP localport=3000 >nul 2>nul
+    netsh advfirewall firewall add rule name="Yoklama Sistemi - HTTPS" dir=in action=allow protocol=TCP localport=3443 >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
         echo [OK] Firewall kurallari eklendi
     ) else (
-        echo [UYARI] Firewall kurallari eklenemedi - yonetici olarak calistirmayi deneyin
-        echo         Telefondan baglantilar calismayabilir!
+        echo [UYARI] Firewall kurallari eklenemedi - yonetici olarak calistirin
     )
 ) else (
     echo [OK] Firewall kurallari mevcut

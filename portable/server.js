@@ -1,5 +1,6 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
 const { Server } = require('socket.io');
 const path = require('path');
 const cors = require('cors');
@@ -10,14 +11,38 @@ const archiver = require('archiver');
 const { v4: uuidv4 } = require('uuid');
 const os = require('os');
 const { exec } = require('child_process');
+const selfsigned = require('selfsigned');
 
 const app = express();
-const server = http.createServer(app);
-const io = new Server(server, {
+
+// Generate self-signed certificate for HTTPS
+const attrs = [{ name: 'commonName', value: 'localhost' }];
+const pems = selfsigned.generate(attrs, { days: 365, keySize: 2048 });
+
+// Create both HTTP and HTTPS servers
+const httpServer = http.createServer(app);
+const httpsServer = https.createServer({
+    key: pems.private,
+    cert: pems.cert
+}, app);
+
+// Socket.IO on HTTPS server (fallback to HTTP if needed)
+const io = new Server(httpsServer, {
     cors: { origin: '*', methods: ['GET', 'POST'] }
 });
 
+// Also attach Socket.IO to HTTP server
+const ioHttp = new Server(httpServer, {
+    cors: { origin: '*', methods: ['GET', 'POST'] }
+});
+
+// Forward HTTP Socket.IO events to main io instance
+ioHttp.on('connection', (socket) => {
+    io.emit('connection', socket);
+});
+
 const PORT = 3000;
+const HTTPS_PORT = 3443;
 
 // Middleware
 app.use(cors());
@@ -539,45 +564,23 @@ app.get('/api/devices', (req, res) => {
     });
 });
 
-// Start Server
-server.listen(PORT, '0.0.0.0', async () => {
+// Start Servers
+httpServer.listen(PORT, '0.0.0.0', () => {
+    console.log(`✅ HTTP Server: http://localhost:${PORT}`);
+});
+
+httpsServer.listen(HTTPS_PORT, '0.0.0.0', () => {
     const localIP = getLocalIP();
+
     console.log('\n' + '='.repeat(50));
-    console.log('🚀 Yoklama Sistemi Başlatıldı!');
+    console.log('Yoklama Sistemi');
     console.log('='.repeat(50));
-    console.log(`📍 Admin Panel: http://localhost:${PORT}`);
-    console.log(`📱 Scanner URL (Local): http://${localIP}:${PORT}/scanner`);
+    console.log(`Admin Panel: https://localhost:${HTTPS_PORT}`);
+    console.log(`Scanner: https://${localIP}:${HTTPS_PORT}/scanner`);
     console.log('='.repeat(50) + '\n');
 
-    // HTTPS Tunnel support (optional)
-    if (process.env.USE_TUNNEL === 'true') {
-        console.log('🌐 HTTPS Tunnel başlatılıyor...\n');
-        try {
-            const localtunnel = require('localtunnel');
-            const tunnel = await localtunnel({ port: PORT });
-
-            console.log('✅ HTTPS Tunnel Aktif!');
-            console.log('='.repeat(50));
-            console.log(`🔒 HTTPS URL: ${tunnel.url}`);
-            console.log(`📱 HTTPS Scanner: ${tunnel.url}/scanner`);
-            console.log('='.repeat(50));
-            console.log('\n💡 HTTPS linkini telefondan aç - kamera direkt çalışır!');
-            console.log('⚠️  Bu URL internete açık! Etkinlik bitince BASLA.bat\'ı kapat.\n');
-
-            tunnel.on('close', () => {
-                console.log('🔴 HTTPS Tunnel kapandı');
-            });
-        } catch (error) {
-            console.error('❌ HTTPS Tunnel hatası:', error.message);
-            console.log('💡 Normal (HTTP) modda devam ediliyor...\n');
-        }
-    } else {
-        console.log('💡 HIZLI KAMERA OKUMA İSTİYORSAN:');
-        console.log('   BASLA_HTTPS.bat kullan (kamera doğrudan açılır)\n');
-    }
-
-    // Auto-open browser
-    const url = `http://localhost:${PORT}`;
+    // Auto-open browser with HTTPS
+    const url = `https://localhost:${HTTPS_PORT}`;
     const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
     exec(`${start} ${url}`);
 });
