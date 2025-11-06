@@ -38,10 +38,10 @@ if not exist "node_modules" (
 
 REM Firewall kontrolu ve kurulum
 echo [2/3] Firewall kontrol ediliyor...
-netsh advfirewall firewall show rule name="Yoklama Sistemi - HTTPS" >nul 2>nul
+netsh advfirewall firewall show rule name="Yoklama Sistemi" >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo Firewall kurallari bulunamadi, otomatik ekleniyor...
-    netsh advfirewall firewall add rule name="Yoklama Sistemi - HTTPS" dir=in action=allow protocol=TCP localport=3443 >nul 2>nul
+    netsh advfirewall firewall add rule name="Yoklama Sistemi" dir=in action=allow protocol=TCP localport=3000 >nul 2>nul
     if %ERRORLEVEL% EQU 0 (
         echo [OK] Firewall kurallari eklendi
     ) else (
