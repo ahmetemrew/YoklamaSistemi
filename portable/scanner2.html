@@ -95,14 +95,35 @@
             Okunan: <span id="scanCount">0</span>
         </div>
 
-        <!-- Camera Permission Button -->
-        <div id="cameraButtonContainer" style="text-align: center; margin: 20px 0;">
-            <button id="requestCameraBtn" onclick="requestCameraPermission()" style="background: #27ae60; font-size: 18px; padding: 20px 40px;">
-                📷 Kamera İzni İste ve Başlat
-            </button>
-            <p style="color: #7f8c8d; font-size: 12px; margin-top: 10px;">
-                Bu butona basarak kamera iznini verebilirsin
+        <!-- QR Scanning Options -->
+        <div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f39c12;">
+            <p style="color: #856404; font-size: 13px; margin: 0;">
+                ℹ️ <strong>Bilgi:</strong> HTTP bağlantılarında kamera doğrudan açılamıyor. Aşağıdaki yöntemlerden birini kullan:
             </p>
+        </div>
+
+        <!-- Method 1: Upload QR Photo -->
+        <div style="background: #d4edda; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #27ae60;">
+            <h3 style="color: #27ae60; margin-top: 0;">📸 Yöntem 1: Fotoğraftan QR Oku (TAVSİYE)</h3>
+            <p style="color: #155724; font-size: 14px; margin-bottom: 15px;">
+                QR kodun fotoğrafını çek ve yükle:
+            </p>
+            <input type="file" id="qrFileInput" accept="image/*" capture="environment" style="display: none;" onchange="handleFileUpload(event)">
+            <button onclick="document.getElementById('qrFileInput').click()" style="background: #27ae60; font-size: 16px; padding: 15px 30px;">
+                📷 Fotoğraf Çek veya Yükle
+            </button>
+            <div id="uploadResult" style="margin-top: 15px;"></div>
+        </div>
+
+        <!-- Method 2: Live Camera (if browser allows) -->
+        <div id="cameraButtonContainer" style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; border: 2px solid #6c757d;">
+            <h3 style="color: #495057; margin-top: 0;">📹 Yöntem 2: Canlı Kamera (Deneyebilirsin)</h3>
+            <p style="color: #6c757d; font-size: 13px; margin-bottom: 15px;">
+                Bazı tarayıcılarda çalışmayabilir:
+            </p>
+            <button id="requestCameraBtn" onclick="requestCameraPermission()" style="background: #6c757d; font-size: 16px; padding: 15px 30px;">
+                📹 Canlı Kamera Dene
+            </button>
         </div>
 
         <div id="reader" style="display: none;"></div>
@@ -252,6 +273,106 @@
             input.value = '';
         }
 
+        // File upload QR scan function
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            const uploadResult = document.getElementById('uploadResult');
+
+            if (!file) {
+                return;
+            }
+
+            uploadResult.innerHTML = '<div style="background: #cce5ff; padding: 10px; border-radius: 5px; color: #004085;">⏳ QR kod okunuyor...</div>';
+            updateStatus('📷 Fotoğraftan QR kod okunuyor...', 'warning');
+
+            try {
+                // Load jsQR library if not loaded
+                if (typeof jsQR === 'undefined') {
+                    await loadJsQR();
+                }
+
+                // Read image file
+                const imageData = await readImageFile(file);
+
+                // Decode QR code
+                const qrCode = jsQR(imageData.data, imageData.width, imageData.height);
+
+                if (qrCode) {
+                    console.log('QR decoded from image:', qrCode.data);
+                    uploadResult.innerHTML = '<div style="background: #d4edda; padding: 10px; border-radius: 5px; color: #155724;">✅ QR kod bulundu! Gönderiliyor...</div>';
+                    await sendScan(qrCode.data);
+                } else {
+                    uploadResult.innerHTML = '<div style="background: #f8d7da; padding: 10px; border-radius: 5px; color: #721c24;">❌ QR kod bulunamadı! Daha net bir fotoğraf çek.</div>';
+                    updateStatus('❌ QR kod bulunamadı', 'error');
+                }
+            } catch (error) {
+                console.error('File upload error:', error);
+                uploadResult.innerHTML = '<div style="background: #f8d7da; padding: 10px; border-radius: 5px; color: #721c24;">❌ Hata: ' + error.message + '</div>';
+                updateStatus('❌ Fotoğraf okunamadı', 'error');
+            }
+
+            // Reset file input
+            event.target.value = '';
+        }
+
+        // Load jsQR library
+        function loadJsQR() {
+            return new Promise((resolve, reject) => {
+                if (typeof jsQR !== 'undefined') {
+                    resolve();
+                    return;
+                }
+
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js';
+                script.onload = () => {
+                    console.log('jsQR loaded');
+                    resolve();
+                };
+                script.onerror = () => {
+                    reject(new Error('jsQR kütüphanesi yüklenemedi'));
+                };
+                document.head.appendChild(script);
+            });
+        }
+
+        // Read image file and convert to ImageData
+        function readImageFile(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+
+                reader.onload = (e) => {
+                    const img = new Image();
+
+                    img.onload = () => {
+                        // Create canvas to get image data
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+
+                        ctx.drawImage(img, 0, 0);
+
+                        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                        resolve(imageData);
+                    };
+
+                    img.onerror = () => {
+                        reject(new Error('Resim yüklenemedi'));
+                    };
+
+                    img.src = e.target.result;
+                };
+
+                reader.onerror = () => {
+                    reject(new Error('Dosya okunamadı'));
+                };
+
+                reader.readAsDataURL(file);
+            });
+        }
+
         // Camera permission request function
         let cameraInitialized = false;
         let scannerInstance = null;
@@ -262,6 +383,13 @@
 
             if (cameraInitialized) {
                 updateStatus('ℹ️ Kamera zaten çalışıyor', 'success');
+                return;
+            }
+
+            // Check if mediaDevices API is available
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                updateStatus('❌ Kamera API desteklenmiyor', 'error');
+                alert('❌ Tarayıcın Kamerayı Desteklemiyor!\n\nSebep: HTTP bağlantısında kamera API bloke edilmiş.\n\n✅ ÇÖZÜM: Yukarıdaki "📷 Fotoğraf Çek veya Yükle" butonunu kullan!\n\nQR kodun fotoğrafını çek, yükle, otomatik okur. 🎯');
                 return;
             }
 
@@ -381,7 +509,7 @@
         }
 
         // Set initial status
-        updateStatus('👆 Kamera başlatmak için yukarıdaki butona bas', 'info');
+        updateStatus('📷 QR kod okutmak için fotoğraf çek veya yükle (en kolay yöntem!)', 'info');
 
         // Allow Enter key for manual input
         document.getElementById('manualInput').addEventListener('keypress', (e) => {
