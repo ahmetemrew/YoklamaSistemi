@@ -171,7 +171,7 @@ app.get('/api/events/:eventId/qrcodes', async (req, res) => {
                     margin: 2,
                     errorCorrectionLevel: 'H'
                 });
-                console.log(`[QR] Generated QR for: ${p.name}`);
+                console.log(`[QR] Generated QR for: ID=${p.id}, Name=${p.name}, UUID=${p.qr_code_data.substring(0, 8)}...`);
             } catch (qrError) {
                 console.error(`[QR] Failed to generate QR for ${p.name}:`, qrError);
                 throw new Error(`QR kod oluşturulamadı: ${p.name}`);

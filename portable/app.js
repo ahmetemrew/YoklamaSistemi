@@ -231,9 +231,9 @@ function displayParticipantsPreview(participants) {
     window.currentParticipants = participants;
 }
 
-// Create Event
-async function createEvent(event) {
-    console.log('🚀 createEvent CALLED!');
+// Create Event (renamed from createEvent to avoid conflict with native API)
+async function handleCreateEvent(event) {
+    console.log('🚀 handleCreateEvent CALLED!');
 
     event.preventDefault();
     console.log('✅ preventDefault called');
