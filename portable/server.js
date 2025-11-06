@@ -314,14 +314,159 @@ app.get('/app.js', (req, res) => {
 });
 
 app.get('/scanner', (req, res) => {
-    res.send(`
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>QR Scanner</title><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px}.header{color:white;text-align:center;margin-bottom:30px}#reader{width:100%;max-width:500px;border-radius:12px;overflow:hidden;box-shadow:0 10px 40px rgba(0,0,0,0.3)}.result{background:white;padding:20px;border-radius:12px;margin-top:20px;max-width:500px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,0.3)}.success{border-left:5px solid #27ae60}.warning{border-left:5px solid #f39c12}.error{border-left:5px solid #e74c3c}</style>
-<script src="https://unpkg.com/html5-qrcode"></script><script src="/socket.io/socket.io.js"></script></head>
-<body><div class="header"><h1>📱 QR Scanner</h1><p>Kamerayı QR koda doğrultun</p></div><div id="reader"></div><div id="result"></div>
-<script>const socket=io();let lastScan='';let lastScanTime=0;const scanner=new Html5Qrcode("reader");scanner.start({facingMode:"environment"},{fps:10,qrbox:250},(decodedText)=>{const now=Date.now();if(decodedText===lastScan&&now-lastScanTime<3000)return;lastScan=decodedText;lastScanTime=now;fetch('/api/attendance/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({qr_code:decodedText,device_id:'mobile'})}).then(r=>r.json()).then(data=>{const result=document.getElementById('result');const className=data.success?'success':(data.warning?'warning':'error');result.className='result '+className;result.innerHTML='<h2>'+(data.message||data.error)+'</h2>';if(data.participant){result.innerHTML+='<p>'+data.participant.name+'</p>';}setTimeout(()=>{result.innerHTML='';},3000);});});</script></body></html>
-    `);
+    res.send(`<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Scanner - Yoklama Sistemi</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .header {
+            color: white;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        #reader {
+            width: 100%;
+            max-width: 500px;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            background: white;
+        }
+        .result {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 20px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        .success { border-left: 5px solid #27ae60; }
+        .warning { border-left: 5px solid #f39c12; }
+        .error { border-left: 5px solid #e74c3c; }
+        #status { color: white; margin-top: 20px; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📱 QR Scanner</h1>
+        <p>Kamerayı QR koda doğrultun</p>
+    </div>
+    <div id="reader"></div>
+    <div id="result"></div>
+    <div id="status">Kamera açılıyor...</div>
+
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        console.log('📱 Scanner page loaded');
+
+        // Check if libraries loaded
+        if (typeof Html5Qrcode === 'undefined') {
+            document.getElementById('status').innerHTML = '❌ QR kod kütüphanesi yüklenemedi!';
+            alert('Hata: Html5Qrcode kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.');
+        }
+
+        if (typeof io === 'undefined') {
+            document.getElementById('status').innerHTML = '❌ Socket.IO kütüphanesi yüklenemedi!';
+            alert('Hata: Socket.IO yüklenemedi. Sunucu bağlantısını kontrol edin.');
+        }
+
+        let socket;
+        try {
+            socket = io();
+            socket.on('connect', () => {
+                console.log('✅ Socket.IO connected');
+                document.getElementById('status').textContent = '✅ Bağlantı başarılı';
+            });
+            socket.on('connect_error', (err) => {
+                console.error('Socket.IO error:', err);
+                document.getElementById('status').textContent = '❌ Sunucu bağlantısı kurulamadı';
+            });
+        } catch (e) {
+            console.error('Socket.IO initialization error:', e);
+        }
+
+        let lastScan = '';
+        let lastScanTime = 0;
+
+        const scanner = new Html5Qrcode("reader");
+
+        scanner.start(
+            { facingMode: "environment" },
+            { fps: 10, qrbox: 250 },
+            (decodedText) => {
+                const now = Date.now();
+                if (decodedText === lastScan && now - lastScanTime < 3000) {
+                    return; // Prevent duplicate scans
+                }
+
+                lastScan = decodedText;
+                lastScanTime = now;
+
+                console.log('📷 QR Code scanned:', decodedText);
+                document.getElementById('status').textContent = '⏳ Kontrol ediliyor...';
+
+                fetch('/api/attendance/scan', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        qr_code: decodedText,
+                        device_id: 'mobile'
+                    })
+                })
+                .then(r => r.json())
+                .then(data => {
+                    const result = document.getElementById('result');
+                    const className = data.success ? 'success' : (data.warning ? 'warning' : 'error');
+                    result.className = 'result ' + className;
+                    result.innerHTML = '<h2>' + (data.message || data.error) + '</h2>';
+
+                    if (data.participant) {
+                        result.innerHTML += '<p><strong>' + data.participant.name + '</strong></p>';
+                    }
+
+                    document.getElementById('status').textContent = '✅ Tarama tamamlandı';
+
+                    setTimeout(() => {
+                        result.innerHTML = '';
+                        document.getElementById('status').textContent = '📷 Yeni QR kod bekleniyor...';
+                    }, 3000);
+                })
+                .catch(err => {
+                    console.error('API Error:', err);
+                    const result = document.getElementById('result');
+                    result.className = 'result error';
+                    result.innerHTML = '<h2>❌ Bağlantı Hatası</h2><p>' + err.message + '</p>';
+                    document.getElementById('status').textContent = '❌ Hata oluştu';
+                });
+            },
+            (errorMessage) => {
+                // QR kod bulunamadı (normal durum, sessizce geç)
+            }
+        ).then(() => {
+            console.log('✅ Camera started');
+            document.getElementById('status').textContent = '📷 QR kod bekleniyor...';
+        }).catch(err => {
+            console.error('❌ Camera error:', err);
+            document.getElementById('status').innerHTML = '❌ Kamera açılamadı: ' + err;
+            alert('Kamera izni verilmedi veya kamera kullanılamıyor: ' + err);
+        });
+    </script>
+</body>
+</html>`);
 });
 
 io.on('connection', (socket) => {

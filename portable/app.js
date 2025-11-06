@@ -557,28 +557,55 @@ async function displayScanningScreen(event, participants) {
     `;
 
     // Generate QR Code for scanner URL
-    QRCode.toCanvas(scannerUrl, { width: 256, margin: 2 }, (error, canvas) => {
-        if (!error) {
-            document.getElementById('qrCodeDisplay').appendChild(canvas);
+    try {
+        if (typeof QRCode !== 'undefined') {
+            QRCode.toCanvas(scannerUrl, { width: 256, margin: 2 }, (error, canvas) => {
+                if (error) {
+                    console.error('QRCode generation error:', error);
+                    document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: red;">QR kod oluşturulamadı</p>';
+                } else {
+                    document.getElementById('qrCodeDisplay').appendChild(canvas);
+                }
+            });
+        } else {
+            console.error('QRCode library not loaded');
+            document.getElementById('qrCodeDisplay').innerHTML = '<p style="color: red;">QR kütüphanesi yüklenemedi</p>';
         }
-    });
+    } catch (e) {
+        console.error('QRCode error:', e);
+    }
 }
 
 // WebSocket Connection
 function connectWebSocket() {
-    socket = io(window.location.origin);
+    if (typeof io === 'undefined') {
+        console.error('❌ Socket.IO library not loaded!');
+        alert('Hata: Socket.IO kütüphanesi yüklenemedi. Sayfayı yenileyin (Ctrl+Shift+R)');
+        return;
+    }
 
-    socket.on('connect', () => {
-        console.log('WebSocket connected');
-    });
+    try {
+        socket = io(window.location.origin);
 
-    socket.on('attendance:new', (data) => {
-        handleNewScan(data);
-    });
+        socket.on('connect', () => {
+            console.log('✅ WebSocket connected');
+        });
 
-    socket.on('disconnect', () => {
-        console.log('WebSocket disconnected');
-    });
+        socket.on('attendance:new', (data) => {
+            handleNewScan(data);
+        });
+
+        socket.on('disconnect', () => {
+            console.log('⚠️ WebSocket disconnected');
+        });
+
+        socket.on('connect_error', (error) => {
+            console.error('❌ WebSocket connection error:', error);
+        });
+    } catch (error) {
+        console.error('❌ Error connecting WebSocket:', error);
+        alert(`WebSocket bağlantı hatası: ${error.message}`);
+    }
 }
 
 function handleNewScan(data) {
