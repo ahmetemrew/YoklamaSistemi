@@ -427,6 +427,12 @@ app.get('/scanner', (req, res) => {
             socket.on('connect', () => {
                 console.log('✅ Socket.IO connected');
                 document.getElementById('status').textContent = '✅ Bağlantı başarılı';
+
+                // Identify as scanner device
+                socket.emit('identify', {
+                    type: 'scanner',
+                    name: 'Telefon Scanner'
+                });
             });
             socket.on('connect_error', (err) => {
                 console.error('Socket.IO error:', err);
@@ -506,9 +512,57 @@ app.get('/scanner', (req, res) => {
 </html>`);
 });
 
+// Track connected devices
+const connectedDevices = new Map();
+
 io.on('connection', (socket) => {
+    const deviceInfo = {
+        id: socket.id,
+        connectedAt: new Date(),
+        lastActivity: new Date(),
+        type: 'scanner', // or 'admin'
+        scans: 0
+    };
+
+    connectedDevices.set(socket.id, deviceInfo);
+
     console.log('📱 Client connected:', socket.id);
-    socket.on('disconnect', () => console.log('📱 Client disconnected:', socket.id));
+    console.log('📊 Total connected devices:', connectedDevices.size);
+
+    // Broadcast device count to all clients
+    io.emit('devices:update', {
+        count: connectedDevices.size,
+        devices: Array.from(connectedDevices.values())
+    });
+
+    // Identify device type
+    socket.on('identify', (data) => {
+        const device = connectedDevices.get(socket.id);
+        if (device) {
+            device.type = data.type || 'scanner';
+            device.name = data.name || 'Unknown';
+        }
+    });
+
+    socket.on('disconnect', () => {
+        connectedDevices.delete(socket.id);
+        console.log('📱 Client disconnected:', socket.id);
+        console.log('📊 Total connected devices:', connectedDevices.size);
+
+        // Broadcast updated device count
+        io.emit('devices:update', {
+            count: connectedDevices.size,
+            devices: Array.from(connectedDevices.values())
+        });
+    });
+});
+
+// API endpoint to get connected devices
+app.get('/api/devices', (req, res) => {
+    res.json({
+        count: connectedDevices.size,
+        devices: Array.from(connectedDevices.values())
+    });
 });
 
 // Start Server

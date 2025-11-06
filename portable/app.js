@@ -550,6 +550,19 @@ async function displayScanningScreen(event, participants) {
             </div>
         </div>
 
+        <div style="background: #e8f5e9; border-left: 4px solid #27ae60; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <strong style="color: #2c3e50;">📱 Bağlı Telefonlar:</strong>
+                    <span id="devicesCount" style="font-size: 24px; color: #27ae60; font-weight: bold; margin-left: 10px;">0</span>
+                </div>
+                <div style="font-size: 12px; color: #7f8c8d;">
+                    SINIRSIZ telefon bağlanabilir
+                </div>
+            </div>
+            <div id="devicesList" style="margin-top: 10px;"></div>
+        </div>
+
         <div class="live-feed">
             <h3>🔴 Canlı Taramalar</h3>
             <div id="liveFeedContent">
@@ -604,10 +617,20 @@ function connectWebSocket() {
 
         socket.on('connect', () => {
             console.log('✅ WebSocket connected');
+
+            // Identify as admin panel
+            socket.emit('identify', {
+                type: 'admin',
+                name: 'Admin Panel'
+            });
         });
 
         socket.on('attendance:new', (data) => {
             handleNewScan(data);
+        });
+
+        socket.on('devices:update', (data) => {
+            updateDeviceCount(data);
         });
 
         socket.on('disconnect', () => {
@@ -620,6 +643,29 @@ function connectWebSocket() {
     } catch (error) {
         console.error('❌ Error connecting WebSocket:', error);
         alert(`WebSocket bağlantı hatası: ${error.message}`);
+    }
+}
+
+function updateDeviceCount(data) {
+    console.log('📱 Devices update:', data);
+
+    const devicesCount = document.getElementById('devicesCount');
+    if (devicesCount) {
+        const scanners = data.devices.filter(d => d.type === 'scanner').length;
+        devicesCount.textContent = scanners;
+
+        // Update device list if it exists
+        const devicesList = document.getElementById('devicesList');
+        if (devicesList && data.devices.length > 0) {
+            devicesList.innerHTML = data.devices
+                .filter(d => d.type === 'scanner')
+                .map((d, i) => `
+                    <div style="padding: 8px; background: #f0f0f0; margin: 5px 0; border-radius: 5px; display: flex; justify-content: space-between; align-items: center;">
+                        <span>📱 Telefon ${i + 1}</span>
+                        <span style="color: #27ae60; font-size: 12px;">● Bağlı</span>
+                    </div>
+                `).join('');
+        }
     }
 }
 
