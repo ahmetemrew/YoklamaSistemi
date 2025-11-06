@@ -20,6 +20,22 @@ window.addEventListener('unhandledrejection', (e) => {
 console.log('✅ App.js loaded successfully');
 console.log('API_URL:', API_URL);
 
+// Load server info on page load
+async function loadServerInfo() {
+    try {
+        const response = await fetch(`${API_URL}/server-info`);
+        const serverInfo = await response.json();
+
+        document.getElementById('phoneUrl').textContent = serverInfo.scannerUrl;
+        document.getElementById('serverInfo').style.display = 'block';
+
+        console.log('📱 Server IP:', serverInfo.ip);
+        console.log('📱 Scanner URL:', serverInfo.scannerUrl);
+    } catch (error) {
+        console.error('Failed to load server info:', error);
+    }
+}
+
 // Screen Navigation
 function showHomeScreen() {
     hideAllScreens();
@@ -48,8 +64,11 @@ function hideAllScreens() {
     document.getElementById('scanningScreen').style.display = 'none';
 }
 
-// Radio button toggle
+// Radio button toggle and initialization
 document.addEventListener('DOMContentLoaded', () => {
+    // Load server info
+    loadServerInfo();
+
     const methodManual = document.getElementById('methodManual');
     const methodExcel = document.getElementById('methodExcel');
     const manualGroup = document.getElementById('manualInputGroup');
@@ -474,15 +493,22 @@ async function startScanning(eventId) {
     }
 }
 
-function displayScanningScreen(event, participants) {
+async function displayScanningScreen(event, participants) {
     hideAllScreens();
 
     const scanningScreen = document.getElementById('scanningScreen');
     scanningScreen.style.display = 'block';
 
-    // Get local IP (will be shown by backend)
-    const serverUrl = window.location.origin.replace('localhost', getLocalIP());
-    const scannerUrl = `${serverUrl}/scanner`;
+    // Get server IP from backend
+    let scannerUrl = 'http://localhost:3000/scanner';
+    try {
+        const response = await fetch(`${API_URL}/server-info`);
+        const serverInfo = await response.json();
+        scannerUrl = serverInfo.scannerUrl;
+        console.log('Scanner URL:', scannerUrl);
+    } catch (error) {
+        console.error('Failed to get server IP:', error);
+    }
 
     scanningScreen.innerHTML = `
         <div class="screen-header">
@@ -707,10 +733,4 @@ function exportAttendanceCSV(event, attendance) {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-}
-
-// Helper: Get Local IP (placeholder)
-function getLocalIP() {
-    // This will be replaced by server-provided IP
-    return 'localhost';
 }

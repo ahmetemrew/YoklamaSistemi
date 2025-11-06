@@ -291,6 +291,15 @@ app.get('/api/events/:eventId/attendance', (req, res) => {
     res.json(attendance);
 });
 
+app.get('/api/server-info', (req, res) => {
+    const localIP = getLocalIP();
+    res.json({
+        ip: localIP,
+        port: PORT,
+        scannerUrl: `http://${localIP}:${PORT}/scanner`
+    });
+});
+
 // Frontend HTML (embedded)
 const frontendHTML = fs.readFileSync(path.join(__dirname, 'index.html'), 'utf8');
 const frontendJS = fs.readFileSync(path.join(__dirname, 'app.js'), 'utf8');

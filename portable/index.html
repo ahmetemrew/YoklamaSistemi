@@ -461,9 +461,20 @@
             <!-- Home Screen -->
             <div class="home-screen" id="homeScreen">
                 <h2 style="color: #2c3e50; margin-bottom: 20px;">Hoş Geldiniz</h2>
-                <p style="color: #7f8c8d; margin-bottom: 40px;">
+                <p style="color: #7f8c8d; margin-bottom: 20px;">
                     Etkinliklerinizi yönetin veya yoklama almaya başlayın
                 </p>
+
+                <div id="serverInfo" style="background: #e8f5e9; border-left: 4px solid #27ae60; padding: 15px; border-radius: 8px; margin-bottom: 30px; display: none;">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px;">
+                        <span style="font-size: 20px;">📱</span>
+                        <strong style="color: #2c3e50;">Telefon Bağlantı Adresi:</strong>
+                    </div>
+                    <div id="phoneUrl" style="font-size: 18px; color: #27ae60; font-weight: bold; font-family: monospace;"></div>
+                    <p style="color: #7f8c8d; font-size: 13px; margin-top: 8px; margin-bottom: 0;">
+                        Bu adresi telefonunuzun tarayıcısına yazın veya yoklama ekranındaki QR kodu taratın
+                    </p>
+                </div>
 
                 <div class="big-buttons">
                     <button class="big-button" onclick="showEventsScreen()">
