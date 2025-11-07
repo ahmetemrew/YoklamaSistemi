@@ -27,7 +27,7 @@ async function loadServerInfo() {
         const serverInfo = await response.json();
 
         const scannerUrl = serverInfo.scannerUrl; // Using consolidated /scanner endpoint
-        const testUrl = `http://${serverInfo.ip}:${serverInfo.port}/test`;
+        const testUrl = `https://${serverInfo.ip}:${serverInfo.port}/test`;
 
         document.getElementById('scanner2Url').textContent = scannerUrl;
         document.getElementById('testUrl').textContent = testUrl;
@@ -505,7 +505,7 @@ async function displayScanningScreen(event, participants) {
     scanningScreen.style.display = 'block';
 
     // Get server IP from backend
-    let scannerUrl = 'http://localhost:3000/scanner';
+    let scannerUrl = 'https://localhost:3000/scanner';
     try {
         const response = await fetch(`${API_URL}/server-info`);
         const serverInfo = await response.json();

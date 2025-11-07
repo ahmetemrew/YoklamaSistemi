@@ -11,18 +11,62 @@ echo.
 REM Node.js kontrolu
 where node >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
-    echo [HATA] Node.js bulunamadi!
+    echo [UYARI] Node.js bulunamadi!
     echo.
-    echo Lutfen Node.js yukleyin:
-    echo https://nodejs.org/
+    echo Node.js otomatik yuklenecek...
     echo.
-    pause
-    exit /b 1
+
+    REM Node.js installer indir
+    echo [1/4] Node.js indiriliyor... ^(~30MB, lutfen bekleyin^)
+    powershell -Command "& {Invoke-WebRequest -Uri 'https://nodejs.org/dist/v20.11.0/node-v20.11.0-x64.msi' -OutFile '%TEMP%\nodejs.msi'}"
+
+    if errorlevel 1 (
+        echo.
+        echo [HATA] Node.js indirilemedi!
+        echo Internet baglantinizi kontrol edin.
+        echo.
+        echo Manuel yukleme icin: https://nodejs.org/
+        pause
+        exit /b 1
+    )
+
+    echo [2/4] Node.js kuruluyor... ^(lutfen bekleyin^)
+    msiexec /i "%TEMP%\nodejs.msi" /qn /norestart
+
+    if errorlevel 1 (
+        echo.
+        echo [HATA] Node.js kurulamadi!
+        echo Manuel olarak yukleyin: https://nodejs.org/
+        pause
+        exit /b 1
+    )
+
+    REM PATH'i yenile
+    echo [3/4] Sistem degiskenleri guncelleniyor...
+    call refreshenv.cmd 2>nul
+
+    REM Node.js PATH'e ekle (aninda kullanim icin)
+    set "PATH=%PATH%;%ProgramFiles%\nodejs"
+
+    echo [4/4] Node.js kurulumu tamamlandi!
+    echo.
+
+    REM Temp dosyayi sil
+    del "%TEMP%\nodejs.msi" 2>nul
+
+    echo Node.js basariyla kuruldu!
+    echo Sistem yeniden baslatiliyor...
+    echo.
+    timeout /t 3 >nul
+
+    REM Scripti yeniden baslat
+    start "" "%~f0"
+    exit
 )
 
 REM node_modules kontrolu
 if not exist "node_modules" (
-    echo [1/3] Ilk kullanimda dependencies yukleniyor...
+    echo [1/2] Ilk kullanimda dependencies yukleniyor...
     echo Bu sadece bir kez yapilacak ^(2-3 dakika^)
     echo.
     call npm install --silent
@@ -37,7 +81,7 @@ if not exist "node_modules" (
 )
 
 REM Firewall kontrolu ve kurulum
-echo [2/3] Firewall kontrol ediliyor...
+echo [2/2] Firewall kontrol ediliyor...
 netsh advfirewall firewall show rule name="Yoklama Sistemi" >nul 2>nul
 if %ERRORLEVEL% NEQ 0 (
     echo Firewall kurallari bulunamadi, otomatik ekleniyor...
@@ -53,7 +97,8 @@ if %ERRORLEVEL% NEQ 0 (
 echo.
 
 REM Server'i baslat
-echo [3/3] Server baslatiliyor...
+echo.
+echo Server baslatiliyor...
 echo.
 echo ==========================================
 echo    HAZIR! Tarayici otomatik acilacak

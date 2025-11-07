@@ -308,7 +308,7 @@ app.get('/api/server-info', (req, res) => {
     res.json({
         ip: localIP,
         port: PORT,
-        scannerUrl: `http://${localIP}:${PORT}/scanner`
+        scannerUrl: `https://${localIP}:${PORT}/scanner`
     });
 });
 
